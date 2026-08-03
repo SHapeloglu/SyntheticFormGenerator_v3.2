@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Koordinat Editörü</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, sans-serif; background: #eef2f6; color: #1e293b; }
+        .topbar { padding: 16px 24px; background: #1f4e78; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .topbar a { color: white; text-decoration: none; font-weight: bold; }
+        .layout { display: grid; grid-template-columns: 360px 1fr; gap: 20px; padding: 20px; }
+        .panel { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 7px; font-weight: bold; }
+        input, select, button { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; }
+        button { border: 0; background: #1f4e78; color: white; cursor: pointer; font-weight: bold; }
+        button.secondary { background: #64748b; }
+        button.danger { background: #b91c1c; }
+        .help { font-size: 13px; color: #64748b; line-height: 1.5; }
+        .canvas-wrap { overflow: auto; max-height: calc(100vh - 110px); background: #dbe4ee; border-radius: 12px; padding: 12px; }
+        .image-stage { position: relative; display: inline-block; user-select: none; }
+        #formImage { display: block; max-width: none; cursor: crosshair; }
+        #selection { position: absolute; border: 2px solid #dc2626; background: rgba(220,38,38,.12); display: none; pointer-events: none; }
+        .status { margin-top: 12px; padding: 10px; border-radius: 8px; background: #eff6ff; color: #1e40af; font-size: 13px; }
+        .saved-list { max-height: 220px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .saved-item { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 12px; cursor: pointer; }
+        .saved-item:last-child { border-bottom: 0; }
+        @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <strong>Form Koordinat Editörü</strong>
+        <a href="/">← Ana sayfa</a>
+    </header>
+
+    <main class="layout">
+        <section class="panel">
+            <h2>1. Formu yükle</h2>
+            <div class="form-group">
+                <label for="pageKey">Sayfa anahtarı</label>
+                <select id="pageKey">
+                    <option value="page1">Sayfa 1</option>
+                    <option value="page2">Sayfa 2</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <input id="formFile" type="file" accept="image/png,image/jpeg,image/webp">
+            </div>
+            <button id="uploadButton" type="button">Görseli Yükle</button>
+            <div id="uploadedFileInfo" class="status" style="margin-top:8px;">
+                Bu sayfa için görsel yüklenmedi.
+            </div>
+
+            <h2>2. Alanı seç</h2>
+            <div class="form-group">
+                <label for="fieldName">Excel alanı</label>
+                <select id="fieldName">
+                    {% for field in field_names %}
+                    <option value="{{ field }}">{{ field }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="fontSize">Yazı boyutu</label>
+                <input id="fontSize" type="number" min="8" max="72" value="28">
+            </div>
+            <p class="help">
+                Görsel üzerinde alanın sol üst köşesine basılı tutup sağ alt köşeye sürükleyin.
+                Kırmızı kutu oluşunca kaydedin.
+            </p>
+            <button id="saveButton" type="button">Koordinatı Kaydet</button>
+            <button id="deleteButton" class="danger" type="button" style="margin-top:8px;">Seçili Alanı Sil</button>
+
+            <div id="status" class="status">Önce form görselini yükleyin.</div>
+
+            <h3>Kayıtlı alanlar</h3>
+            <div id="savedList" class="saved-list"></div>
+        </section>
+
+        <section class="canvas-wrap">
+            <div class="image-stage" id="imageStage">
+                <img id="formImage" alt="Form şablonu">
+                <div id="selection"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const coordinates = {{ coordinates | tojson }};
+        const pageKey = document.getElementById('pageKey');
+        const fieldName = document.getElementById('fieldName');
+        const fontSize = document.getElementById('fontSize');
+        const formFile = document.getElementById('formFile');
+        const formImage = document.getElementById('formImage');
+        const selection = document.getElementById('selection');
+        const imageStage = document.getElementById('imageStage');
+        const statusBox = document.getElementById('status');
+        const uploadedFileInfo = document.getElementById('uploadedFileInfo');
+        const savedList = document.getElementById('savedList');
+
+        let startX = 0;
+        let startY = 0;
+        let drawing = false;
+        let currentRect = null;
+
+        function currentPage() {
+            return coordinates.pages?.[pageKey.value] || {};
+        }
+
+        function loadCurrentPage() {
+            const page = currentPage();
+            const pageLabel = pageKey.options[pageKey.selectedIndex].text;
+
+            // Önceki sayfada seçilmiş yerel dosyayı temizle.
+            // Böylece Sayfa 1 ve Sayfa 2 arasında geçiş yapıldığında
+            // aynı dosya adı seçiliymiş gibi görünmez.
+            formFile.value = '';
+
+            if (page.image) {
+                formImage.src = `/static/forms/${page.image}?t=${Date.now()}`;
+                statusBox.textContent = `${pageLabel} görseli yüklendi.`;
+                uploadedFileInfo.textContent = `Yüklü dosya: ${page.image}`;
+            } else {
+                formImage.removeAttribute('src');
+                statusBox.textContent = 'Bu sayfa için henüz görsel yüklenmedi.';
+                uploadedFileInfo.textContent = 'Bu sayfa için görsel yüklenmedi.';
+            }
+
+            currentRect = null;
+            selection.style.display = 'none';
+            renderSavedList();
+        }
+
+        function renderSavedList() {
+            const fields = currentPage().fields || {};
+            savedList.innerHTML = '';
+            Object.entries(fields).forEach(([name, config]) => {
+                const item = document.createElement('div');
+                item.className = 'saved-item';
+                item.textContent = `${name}: x=${config.x}, y=${config.y}, w=${config.width}, h=${config.height}`;
+                item.onclick = () => {
+                    fieldName.value = name;
+                    fontSize.value = config.font_size || 28;
+                    showRect(config);
+                };
+                savedList.appendChild(item);
+            });
+            if (!Object.keys(fields).length) {
+                savedList.innerHTML = '<div class="saved-item">Henüz alan kaydedilmedi.</div>';
+            }
+        }
+
+        function showRect(rect) {
+            currentRect = rect;
+            selection.style.left = `${rect.x}px`;
+            selection.style.top = `${rect.y}px`;
+            selection.style.width = `${rect.width}px`;
+            selection.style.height = `${rect.height}px`;
+            selection.style.display = 'block';
+        }
+
+        formImage.addEventListener('mousedown', event => {
+            if (!formImage.src) return;
+            const bounds = formImage.getBoundingClientRect();
+            startX = event.clientX - bounds.left;
+            startY = event.clientY - bounds.top;
+            drawing = true;
+            showRect({x: Math.round(startX), y: Math.round(startY), width: 1, height: 1});
+        });
+
+        window.addEventListener('mousemove', event => {
+            if (!drawing) return;
+            const bounds = formImage.getBoundingClientRect();
+            const currentX = Math.max(0, Math.min(event.clientX - bounds.left, formImage.naturalWidth));
+            const currentY = Math.max(0, Math.min(event.clientY - bounds.top, formImage.naturalHeight));
+            const x = Math.min(startX, currentX);
+            const y = Math.min(startY, currentY);
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            showRect({x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height)});
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (drawing) {
+                drawing = false;
+                statusBox.textContent = 'Alan seçildi. Koordinatı Kaydet düğmesine basın.';
+            }
+        });
+
+        document.getElementById('uploadButton').onclick = async () => {
+            const file = formFile.files[0];
+            if (!file) {
+                statusBox.textContent = 'Önce bir görsel seçin.';
+                return;
+            }
+            const body = new FormData();
+            body.append('form_image', file);
+            body.append('page_key', pageKey.value);
+            const response = await fetch('/coordinates/upload', {method: 'POST', body});
+            const result = await response.json();
+            if (!result.ok) {
+                statusBox.textContent = result.error;
+                return;
+            }
+            coordinates.pages = coordinates.pages || {};
+            coordinates.pages[result.page_key] =
+                coordinates.pages[result.page_key] || {fields: {}};
+            coordinates.pages[result.page_key].image = result.filename;
+
+            formImage.src = `${result.image_url}?t=${Date.now()}`;
+            uploadedFileInfo.textContent = `Yüklü dosya: ${result.filename}`;
+            statusBox.textContent =
+                `${pageKey.options[pageKey.selectedIndex].text} başarıyla yüklendi.`;
+
+            // Yükleme tamamlandıktan sonra yerel dosya seçimini temizle.
+            formFile.value = '';
+        };
+
+        document.getElementById('saveButton').onclick = async () => {
+            if (!currentRect || currentRect.width < 2 || currentRect.height < 2) {
+                statusBox.textContent = 'Önce görsel üzerinde bir alan seçin.';
+                return;
+            }
+            const payload = {
+                page_key: pageKey.value,
+                field_name: fieldName.value,
+                font_size: Number(fontSize.value),
+                ...currentRect
+            };
+            const response = await fetch('/coordinates/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!result.ok) {
+                statusBox.textContent = result.error;
+                return;
+            }
+            coordinates.pages = coordinates.pages || {};
+            const page = coordinates.pages[pageKey.value] = coordinates.pages[pageKey.value] || {fields: {}};
+            page.fields = page.fields || {};
+            page.fields[fieldName.value] = result.config;
+            statusBox.textContent = `${fieldName.value} kaydedildi.`;
+            renderSavedList();
+        };
+
+        document.getElementById('deleteButton').onclick = async () => {
+            const payload = {page_key: pageKey.value, field_name: fieldName.value};
+            const response = await fetch('/coordinates/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.ok) {
+                const fields = currentPage().fields || {};
+                delete fields[fieldName.value];
+                selection.style.display = 'none';
+                currentRect = null;
+                statusBox.textContent = `${fieldName.value} silindi.`;
+                renderSavedList();
+            }
+        };
+
+        pageKey.onchange = loadCurrentPage;
+        loadCurrentPage();
+    </script>
+</body>
+</html>

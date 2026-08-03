@@ -1,0 +1,9 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Batch Yönetimi</title>{% include '_base_style.html' %}</head><body><main class="wrap">
+<div class="nav"><a class="btn alt" href="/">Ana sayfa</a><a class="btn" href="/search">FORM ID ara</a></div>
+{% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+<section class="panel"><h1>Geçmiş Batch'ler</h1><p class="muted">Aktif üretimler, dosya bütünlüğü ve form aralıkları.</p>
+{% if batches %}<table><thead><tr><th>Batch</th><th>Tarih</th><th>Profil</th><th>Form</th><th>Aralık</th><th>Kontrol</th><th>İşlem</th></tr></thead><tbody>
+{% for b in batches %}<tr><td><a href="/batch/{{ b.batch_id }}"><b>{{ b.batch_id }}</b></a></td><td>{{ b.created_at }}</td><td>{{ b.doctor_profile }}</td><td>{{ b.count }}</td><td>{{ b.first_form_id }}<br>{{ b.last_form_id }}</td><td>{% if b.validation.ok %}<span class="badge ok">Sağlam</span>{% else %}<span class="badge bad">Sorunlu</span><div class="small">{{ b.validation.errors|join('; ') }}</div>{% endif %}</td><td><a class="btn small" href="/batch/{{ b.batch_id }}">Aç</a> <a class="btn small alt" href="/batch/{{ b.batch_id }}/download/zip">ZIP</a></td></tr>{% endfor %}
+</tbody></table>{% else %}<p>Aktif batch yok.</p>{% endif %}</section>
+<section class="panel" style="margin-top:20px"><h2>Arşiv</h2>{% if archived_batches %}<table><tr><th>Batch</th><th>Tarih</th><th>Form</th><th>İşlem</th></tr>{% for b in archived_batches %}<tr><td>{{ b.batch_id }}</td><td>{{ b.created_at }}</td><td>{{ b.count }}</td><td><form method="post" action="/batch/{{ b.batch_id }}/restore"><button class="btn small good">Geri al</button></form></td></tr>{% endfor %}</table>{% else %}<p class="muted">Arşiv boş.</p>{% endif %}</section>
+</main></body></html>

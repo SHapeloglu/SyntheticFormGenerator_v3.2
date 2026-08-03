@@ -1,0 +1,12 @@
+{
+  "pages": {
+    "page1": {
+      "image": "page1.jpeg",
+      "fields": {}
+    },
+    "page2": {
+      "image": "page2.jpeg",
+      "fields": {}
+    }
+  }
+}
