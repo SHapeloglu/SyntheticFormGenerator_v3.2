@@ -1,76 +1,43 @@
-# architect.md — Synthetic Form Generator v2 Mimari Referansı
-
-Bu dosya projenin yapısının hızlı-referans özetidir. Kod değiştikçe güncel tutun.
-
-## Genel Bakış
-
-python -m venv venv
-
-## Teknoloji Yığını
-
-- Flask
-- openpyxl
-
-## Dizin Yapısı
+# architect.md — Synthetic Form Generator v3.2 Mimarisi
 
 ```
-.gitignore
-README_V2.md
-README_V3.md
-README_V3_1.md
-README_V3_2.md
-app.py
-config/
-  coordinates.json
-  fields.json
-  jobs.json
-  outputs
-  sequence.json
-requirements.txt
-services/
-  __init__.py
-  batch_storage.py
-  data_generator.py
-  excel_exporter.py
-  form_renderer.py
-  sequence_manager.py
-static/
-templates/
-  _base_style.html
-  batch.html
-  batches.html
-  cards.html
-  coordinates.html
-  index.html
-  search.html
+/ (form: adet, fill_rate, doctor_profile)
+   │ POST /batch/create (= /generate)
+   ▼
+reserve_sequence(config/sequence.json, n) ──► start_number
+generate_records(n, fill_rate, doctor_profile, start_index)
+   │ her kayda "Form ID" = FORM-%05d
+   ▼
+save_batch → outputs/batches/BATCH-<YYYYmmdd_HHMMSS_ffffff>/ (records + metadata JSON)
+create_excel → …/ground_truth.xlsx
+validate_batch → hata varsa 500
+   ▼
+batch.html (özet) · /batch/<id>/cards (yazdırılabilir kartlar) · /batch/<id>/download/<excel|json|zip>
 ```
 
-## Modüller / Kaynak Dosyalar
+## Route'lar
 
-- `app.py`
-- `services/batch_storage.py`
-- `services/data_generator.py`
-- `services/excel_exporter.py`
-- `services/form_renderer.py`
-- `services/sequence_manager.py`
+| Route | İşlev |
+|---|---|
+| `GET /` | Üretim formu + son 10 batch |
+| `POST /batch/create`, `POST /generate` | Batch üret |
+| `GET /batch/<id>` / `…/cards` | Özet / kart görünümü |
+| `GET /batch/<id>/download/<kind>` | Excel, JSON veya tüm klasör ZIP |
+| `GET /batches` | Aktif + arşiv batch listesi |
+| `GET /search?form_id=` | Form ID ile kayıt bulma |
+| `POST /batch/<id>/archive` / `restore` | `outputs/archive` ↔ `outputs/batches` |
+| `GET /batch/<id>/validate` | Bütünlük kontrolü (JSON) |
+| `GET /coordinates`, `POST /coordinates/upload|save|delete` | Form görseli yükleme ve alan koordinatı düzenleme (`config/coordinates.json`, `static/forms/page{1,2}.jpeg`) |
 
-## Giriş Noktaları ve Yapılandırma
+## Veri Üretimi (`data_generator.py`)
 
-- `app.py`
-- `requirements.txt`
-- `templates/index.html`
-
-## Dağıtım / Çalışma Ortamı
-
-- GitHub: https://github.com/SHapeloglu/SyntheticFormGenerator_v3.2
-
-## Diğer Dokümanlar
-
-- `README_V2.md`
-- `README_V3.md`
-- `README_V3_1.md`
-- `README_V3_2.md`
+- Kimlik: cinsiyete göre ad, `synthetic_tc(index)` (TC algoritmasına uygun 10./11. hane, test amaçlı).
+- İş: `JOB_PROFILES` (perakende mağaza/depo pozisyonları), `IZMIR_STORES`, `PREVIOUS_EMPLOYERS`, önceki iş grupları tutarlılığı.
+- Muayene: `EXAM_FIELDS` alan başına `minimal/normal/detailed` ifade havuzları; form içinde tek hekim profili (tutarlı dil); Boy/Kilo/BMI ve kan grubu/Rh tutarlılığı.
+- Eksiklik: `fill_rate` (% doluluk, min %30) ile isteğe bağlı alanlar boş bırakılır.
 
 ## Mimari Kararlar
 
-_Önemli tasarım kararlarını ve gerekçelerini buraya ekleyin (ör. "X yerine Y seçildi çünkü ...")._
+- **DB yok, klasör = batch**: ground truth taşınabilir, ZIP ile paylaşılabilir.
+- **Global artan Form ID** (JSON dosyasında): taranan form ↔ kayıt eşleşmesi için tek anahtar.
+- **İnsan eliyle doldurma**: gerçek el yazısı çeşitliliği; sentetik render (koordinat editörü) ileride tamamen otomatik veri için hazırlanıyor.

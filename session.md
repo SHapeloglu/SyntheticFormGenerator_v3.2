@@ -1,41 +1,29 @@
-# session.md — Synthetic Form Generator v2 Oturum Günlüğü
-
-Her çalışma oturumunda buraya kısa bir kayıt düşülür: ne yapıldı, hangi kararlar alındı, sıradaki adım ne. Amaç, bir sonraki oturuma (veya başka bir geliştiriciye/Claude örneğine) hızlıca bağlam aktarmak.
-
----
-
-## Şablon
-
-```markdown
-## YYYY-AA-GG
-
-**Yapılanlar:**
-- ...
-
-**Alınan kararlar / neden:**
-- ...
-
-**Açık sorunlar / bilinen eksikler:**
-- ...
-
-**Sıradaki adım:**
-- ...
-```
+# session.md — Synthetic Form Generator Oturum Günlüğü
 
 ---
 
 ## 2026-10-05
 
-**Yapılanlar:**
-- Eksik proje çalışma dosyaları oluşturuldu: `architect.md`, `backlog.md`, `CLAUDE.md`, `session.md`, `task.md`.
-- İçerik; README, dosya yapısı, bağımlılık dosyaları ve git geçmişinden çıkarıldı.
+- Şablondan üretilmiş çalışma dosyaları kod okunarak yeniden yazıldı.
+- Tespitler: `render_page` kullanılmıyor ve koordinat dosyası boş (editör hazır, veri yok); `config/` altında boş kalıntı dosyalar.
 
-**Açık sorunlar / bilinen eksikler:**
-- Otomatik test bulunamadı — kritik akışlar için en azından duman (smoke) testleri eklenmeli.
+---
 
-**Sıradaki adım:**
-- `CLAUDE.md` ve `architect.md` içeriğini gözden geçirip proje sahibinin bilgisiyle tamamla.
+## Önceki Sürümler (README_V*.md'den)
 
-### Bu tarihten önceki son commit'ler (referans)
+- **v2** — ilk web arayüzü.
+- **v3** — hekim yazım profilleri, NFM/N/Doğal gibi kısa ifadeler, alan bazlı boş bırakma, BMI/kan grubu tutarlılığı, sentetik TC, kompakt kart.
+- **v3.1** — (README_V3_1.md).
+- **v3.2** (2026-08-03 baseline commit) — batch yönetimi, Form ID arama, ZIP indirme, bütünlük kontrolü, arşiv/geri alma.
 
-- 2026-08-03 — Initial project baseline v3.2
+---
+
+### Kayıt Şablonu
+
+```markdown
+## YYYY-AA-GG
+**Yapılanlar:** ...
+**Kararlar / neden:** ...
+**Açık sorunlar:** ...
+**Sıradaki adım:** ...
+```
