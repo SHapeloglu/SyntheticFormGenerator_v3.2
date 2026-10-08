@@ -157,6 +157,7 @@ def batch_cards(batch_id: str):
     return render_template(
         "cards.html", batch_id=batch_id, records=payload["records"], mode=mode,
         card_groups=card_groups, simplified_fields=simplified_fields,
+        pdf=request.args.get("pdf") == "1",
     )
 
 

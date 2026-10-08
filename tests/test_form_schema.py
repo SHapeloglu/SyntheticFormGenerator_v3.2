@@ -79,6 +79,6 @@ def test_batch_ocr_dosyalari_ve_kartlar(tmp_path, monkeypatch):
     meta = json.loads((batch / "ground_truth.json").read_text(encoding="utf-8"))["metadata"]
     assert len(meta["test_form_ids"]) == 4
     kartlar = client.get(f"/batch/{batch.name}/cards").get_data(as_text=True)
-    assert kartlar.count("TEST SETİ") == 8  # 4 form × 2 kart sayfası
+    assert kartlar.count("TEST SETİ") == 4
     assert "Hayır'ı daire içine al" in kartlar
     assert client.post("/batch/create", data={"count": "5", "test_count": "5"}).status_code == 400

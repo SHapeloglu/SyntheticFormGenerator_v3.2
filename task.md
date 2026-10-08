@@ -20,9 +20,9 @@ _(şu anda boş)_
   - Test seti ayrımı (`test_count`, varsayılan 10; aynı kişinin formları bölünmez), kartta "TEST SETİ" ve "Dolduran" satırı
   - 07/09 ay yanlılığı (~%20) — rakam karışıklığı ölçümü için
   - `ocr_ground_truth/<sfgNNNNN>.json`: faz1 `data/cikti/ground_truth/` biçimi (boş kutu = `boş`); elle etiketleme ve "Ekrik/Eksik" türü yazım hatası gerekmez
-  - Kart her form için 2 A4 (form sayfa 1/2); eski yazdırma kuralı 297 mm'de kesiyordu
+  - Kart form başına tek A4 (matbu form sayfa 1 ve 2 ara başlıklı); `?pdf=1` sıkı PDF stili. Eski yazdırma kuralı 297 mm'de kesiyordu
   - 28 test (6 yeni: şema = faz1 şablonu, biçim/tutarlılık 60 tohum, tekrar muayene, test ayrımı, batch çıktıları)
-- [x] 2026-10-08 — İlk 50'lik batch: `BATCH-20261008_113109_843050` (FORM-00001…00050, 45 kişi, 10 test formu), `kartlar.pdf` 100 sayfa
+- [x] 2026-10-08 — İlk 50'lik batch: `BATCH-20261008_113109_843050` (FORM-00001…00050, 45 kişi, 10 test formu), `kartlar.pdf` 50 sayfa
 
 - [x] 2026-10-08 — `render_page` route'a bağlandı: `GET /batch/<batch_id>/preview/<form_id>/<page_key>` (JPEG, `outputs/batches/<batch>/preview/` altına yazar)
 - [x] 2026-10-08 — Boş kalıntı dosyalar kaldırıldı: `config/fields.json`, `config/jobs.json`, `config/outputs`

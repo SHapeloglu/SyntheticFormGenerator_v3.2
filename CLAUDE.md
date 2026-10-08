@@ -32,7 +32,7 @@ pip install pytest && python -m pytest -q      # birim testleri (tests/)
 - `outputs/` gitignore'da ve ground truth'u tutar; yedeksiz silme. Arşiv `outputs/archive/`'a taşır (silmez).
 - Üretilen her batch otomatik `validate_batch`'ten geçer (Form ID tekrarı, metadata tutarlılığı); doğrulama kuralı eklersen orada.
 - Kart etiketleri Excel başlığıdır; OCR alan adları (`FORM_SCHEMA` ilk sütunu) faz1-trocr-main `sablon_koordinatlari.json` ile **birebir aynı** olmalı (`tests/test_form_schema.py` denetler). Değer biçimleri gerçek etiketlerin yazımını izler (tarih `gg/aa/yyyy`, `A +`, `10/15`, `NFM`) — ISO tarihe dönme.
-- Batch çıktısı: `ground_truth.json/.xlsx`, `ocr_ground_truth/<sfgNNNNN>.json` (faz1'e kopyalanır), kart PDF'i: `wkhtmltopdf --encoding utf-8 -s A4 -B 0 -T 0 -L 0 -R 0 --zoom 1.4 kartlar.html kartlar.pdf`.
+- Batch çıktısı: `ground_truth.json/.xlsx`, `ocr_ground_truth/<sfgNNNNN>.json` (faz1'e kopyalanır), kart PDF'i (form başına tek A4): `/batch/<id>/cards?pdf=1` çıktısı kaydedilip `wkhtmltopdf --disable-smart-shrinking --encoding utf-8 -s A4 -B 0 -T 0 -L 0 -R 0 kartlar.html kartlar.pdf`; sayfa sayısı = form sayısı olmalı (fazlaysa taşan kart var). wkhtmltopdf `--zoom`'u ve `@media print`'i uygulamıyor.
 - Gerçek kişisel veri kullanma; TC, isim, telefon tamamen sentetik kalmalı.
 - Form verisi `data_generator.py` sabitlerinde (config altında ayrı veri dosyası yok).
 - Ağa açılırsa `SFG_SECRET_KEY` ortam değişkeni verilmeli; `debug=True` kapatılmalı.
