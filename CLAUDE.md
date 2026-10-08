@@ -12,6 +12,7 @@ El yazısı OCR veri seti üretimi için sentetik **işe giriş / periyodik muay
 python -m venv venv && . venv/bin/activate     # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python app.py      # http://127.0.0.1:5000 (debug=True, sadece localhost)
+pip install pytest && python -m pytest -q      # birim testleri (tests/)
 ```
 
 Önce 3–5 form üretip kart yazdırma önizlemesini kontrol et, sonra 50–60'lık batch'ler üret (README_V3).
@@ -23,7 +24,7 @@ python app.py      # http://127.0.0.1:5000 (debug=True, sadece localhost)
 - `services/sequence_manager.py` — `config/sequence.json` içindeki `next_form_number`'ı rezerve eder → `FORM-00001` biçiminde benzersiz Form ID.
 - `services/batch_storage.py` — `outputs/batches/<BATCH-…>/` kaydet/yükle/doğrula/ara/arşivle/geri al.
 - `services/excel_exporter.py` — ground truth Excel.
-- `services/form_renderer.py` + `/coordinates` — form görseline alan koordinatı yerleştirme editörü ve `render_page` (görsel üzerine yazdırma); **`render_page` henüz hiçbir route'tan çağrılmıyor**, `config/coordinates.json`'da alan tanımı yok.
+- `services/form_renderer.py` + `/coordinates` — form görseline alan koordinatı yerleştirme editörü ve `render_page` (görsel üzerine yazdırma); önizleme: `GET /batch/<batch_id>/preview/<form_id>/<page_key>`. `config/coordinates.json`'da alan tanımı henüz yok; `static/forms/` görselleri boş şablon değil, doldurulmuş form fotoğrafı.
 
 ## Kurallar ve Tuzaklar
 
@@ -32,5 +33,6 @@ python app.py      # http://127.0.0.1:5000 (debug=True, sadece localhost)
 - Üretilen her batch otomatik `validate_batch`'ten geçer (Form ID tekrarı, metadata tutarlılığı); doğrulama kuralı eklersen orada.
 - Alan adları (ör. `"Form ID"`, `"a) Göz"`) Excel başlığı ve kart etiketi olarak kullanılıyor; değiştirmek mevcut ground truth ile uyumu bozar — OCR tarafıyla birlikte değiştir.
 - Gerçek kişisel veri kullanma; TC, isim, telefon tamamen sentetik kalmalı.
-- `config/fields.json`, `config/jobs.json`, `config/outputs` boş dosyalar (kalıntı); veri `data_generator.py` sabitlerinde.
+- Form verisi `data_generator.py` sabitlerinde (config altında ayrı veri dosyası yok).
+- Ağa açılırsa `SFG_SECRET_KEY` ortam değişkeni verilmeli; `debug=True` kapatılmalı.
 - Oturum sonunda `session.md`'ye kayıt düş, `task.md`'yi güncelle.

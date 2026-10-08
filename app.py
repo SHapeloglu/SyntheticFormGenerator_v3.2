@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -14,7 +15,7 @@ from services.batch_storage import (
 )
 from services.data_generator import generate_records
 from services.excel_exporter import create_excel
-from services.form_renderer import load_coordinates, save_coordinates
+from services.form_renderer import RenderError, load_coordinates, render_page, save_coordinates
 from services.sequence_manager import reserve_sequence
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -28,7 +29,8 @@ SEQUENCE_PATH = BASE_DIR / "config" / "sequence.json"
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 app = Flask(__name__)
-app.secret_key = "synthetic-form-generator-local-secret"
+# Yerel araç için sabit yedek; ağa açılırsa SFG_SECRET_KEY ortam değişkeniyle verilmeli.
+app.secret_key = os.environ.get("SFG_SECRET_KEY", "synthetic-form-generator-local-secret")
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
 
@@ -239,6 +241,24 @@ def batch_validate(batch_id: str):
 @app.post("/generate")
 def generate():
     return create_batch()
+
+
+@app.get("/batch/<batch_id>/preview/<form_id>/<page_key>")
+def form_preview(batch_id: str, form_id: str, page_key: str):
+    try:
+        payload = load_batch(BATCH_DIR, batch_id)
+    except (FileNotFoundError, ValueError):
+        abort(404)
+    record = next((r for r in payload["records"] if str(r.get("Form ID", "")).upper() == form_id.upper()), None)
+    page = load_coordinates(COORDINATES_PATH).get("pages", {}).get(page_key)
+    if record is None or not page or not page.get("image"):
+        abort(404)
+    output_path = BATCH_DIR / batch_id / "preview" / f"{secure_filename(form_id)}_{secure_filename(page_key)}.jpg"
+    try:
+        render_page(FORM_DIR / page["image"], output_path, record, page.get("fields", {}))
+    except RenderError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    return send_file(output_path, mimetype="image/jpeg")
 
 
 @app.get("/coordinates")
