@@ -20,7 +20,7 @@ pip install pytest && python -m pytest -q      # birim testleri (tests/)
 ## Dosyalar
 
 - `app.py` — route'lar, kart gruplama (`card_groups`, `simplified_fields`), batch oluşturma/indirme/arşiv.
-- `services/data_generator.py` — Faker `tr_TR`; İzmir ilçeleri + perakende iş profilleri, önceki işyerleri, muayene alanları (`EXAM_FIELDS`), hekim yazım profili (`minimal/normal/detailed/random`), `fill_rate` ile alan boş bırakma, `synthetic_tc` (algoritmik olarak geçerli **sahte** TC).
+- `services/data_generator.py` — `FORM_SCHEMA`: matbu formun 92 kutusu (faz1 OCR alan adı ↔ kart etiketi ↔ sayfa ↔ bölüm). Kişi (`generate_identity`) + form (`generate_form`); `repeat_rate` ile aynı kişinin sonraki muayeneleri, `assign_test_split` test seti, `ocr_ground_truth` faz1 biçimi. Faker `tr_TR`, hekim yazım profili (`minimal/normal/detailed/random`), `fill_rate`, `synthetic_tc` (algoritmik olarak geçerli **sahte** TC).
 - `services/sequence_manager.py` — `config/sequence.json` içindeki `next_form_number`'ı rezerve eder → `FORM-00001` biçiminde benzersiz Form ID.
 - `services/batch_storage.py` — `outputs/batches/<BATCH-…>/` kaydet/yükle/doğrula/ara/arşivle/geri al.
 - `services/excel_exporter.py` — ground truth Excel.
@@ -31,7 +31,8 @@ pip install pytest && python -m pytest -q      # birim testleri (tests/)
 - **`config/sequence.json`'u silme / sıfırlama** — Form ID'ler global benzersiz olmalı; sıfırlanırsa eski taramalarla çakışır.
 - `outputs/` gitignore'da ve ground truth'u tutar; yedeksiz silme. Arşiv `outputs/archive/`'a taşır (silmez).
 - Üretilen her batch otomatik `validate_batch`'ten geçer (Form ID tekrarı, metadata tutarlılığı); doğrulama kuralı eklersen orada.
-- Alan adları (ör. `"Form ID"`, `"a) Göz"`) Excel başlığı ve kart etiketi olarak kullanılıyor; değiştirmek mevcut ground truth ile uyumu bozar — OCR tarafıyla birlikte değiştir.
+- Kart etiketleri Excel başlığıdır; OCR alan adları (`FORM_SCHEMA` ilk sütunu) faz1-trocr-main `sablon_koordinatlari.json` ile **birebir aynı** olmalı (`tests/test_form_schema.py` denetler). Değer biçimleri gerçek etiketlerin yazımını izler (tarih `gg/aa/yyyy`, `A +`, `10/15`, `NFM`) — ISO tarihe dönme.
+- Batch çıktısı: `ground_truth.json/.xlsx`, `ocr_ground_truth/<sfgNNNNN>.json` (faz1'e kopyalanır), kart PDF'i: `wkhtmltopdf --encoding utf-8 -s A4 -B 0 -T 0 -L 0 -R 0 --zoom 1.4 kartlar.html kartlar.pdf`.
 - Gerçek kişisel veri kullanma; TC, isim, telefon tamamen sentetik kalmalı.
 - Form verisi `data_generator.py` sabitlerinde (config altında ayrı veri dosyası yok).
 - Ağa açılırsa `SFG_SECRET_KEY` ortam değişkeni verilmeli; `debug=True` kapatılmalı.

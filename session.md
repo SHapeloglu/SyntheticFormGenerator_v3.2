@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-08 (2) — v3.3 ve ilk 50 form
+
+**Yapılanlar:** Üretici faz1-trocr-main'in 92 alanlık şablonuna hizalandı (ayrıntı task.md). İlk batch `BATCH-20261008_113109_843050` üretildi; `kartlar.pdf` (wkhtmltopdf, `--zoom 1.4`, 100 sayfa).
+**Kararlar / neden:** Değer biçimleri gerçek ground truth'un *biçim kalıplarından* alındı (harf→a, rakam→9; gerçek değerler okunmadı/basılmadı). Kişi no ve TC Form ID aralığından gelir → batch'ler arası çakışma yok. Taramalar faz1 kuralıyla `<OCR ID><sayfa>` (ör. `sfg000011.jpeg`) adlandırılır.
+**Açık sorunlar:** wkhtmltopdf CSS grid'i işlemiyor → kart düzeni inline-block. Faker'ın bazı adları sıra dışı (ör. "İncifir") — el yazısı için sorun değil.
+**Sıradaki adım:** Formlar doldurulup taranınca `ocr_ground_truth/*.json` faz1 `data/cikti/ground_truth/`'a, taramalar giriş klasörüne; 10 test formu `--test-formlari` ile ayrılır.
+
+---
+
 ## 2026-10-08
 
 **Yapılanlar:** Kalıntı config dosyaları silindi; `secret_key` ortam değişkenine taşındı; `render_page` önizleme route'una bağlandı; `tests/` altında 22 birim testi (`venv/bin/python -m pytest -q`).

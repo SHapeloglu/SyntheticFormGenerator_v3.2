@@ -87,6 +87,17 @@ def validate_batch(batch_dir: Path, batch_id: str) -> dict[str, Any]:
     else:
         warnings.append("Batch içinde Form ID içeren kayıt yok.")
 
+    # v3.3+: her form için faz1-trocr biçiminde ocr_ground_truth/<OCR ID>.json beklenir.
+    ocr_ids = [str(r.get("OCR ID", "")).strip() for r in records if isinstance(r, dict) and r.get("OCR ID")]
+    if ocr_ids:
+        missing = [ocr_id for ocr_id in ocr_ids if not (target / "ocr_ground_truth" / f"{ocr_id}.json").exists()]
+        if missing:
+            errors.append(f"{len(missing)} form için OCR ground truth dosyası yok: " + ", ".join(missing[:5]))
+        test_ids = metadata.get("test_form_ids") or []
+        tagged = [str(r.get("Form ID")) for r in records if r.get("Kullanım") == "test"]
+        if sorted(test_ids) != sorted(tagged):
+            errors.append("Test seti listesi metadata ile kayıtlar arasında uyuşmuyor.")
+
     return {
         "ok": not errors,
         "errors": errors,

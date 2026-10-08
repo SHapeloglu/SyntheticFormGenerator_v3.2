@@ -13,7 +13,7 @@ from services.batch_storage import (
     archive_batch, list_archived_batches, list_batches, load_batch, restore_batch,
     save_batch, search_form, validate_batch,
 )
-from services.data_generator import generate_records
+from services.data_generator import FORM_SCHEMA, assign_test_split, generate_records, ocr_ground_truth
 from services.excel_exporter import create_excel
 from services.form_renderer import RenderError, load_coordinates, render_page, save_coordinates
 from services.sequence_manager import reserve_sequence
@@ -42,47 +42,33 @@ def ensure_dirs() -> None:
 
 
 def card_groups(record: dict) -> list[tuple[str, list[tuple[str, object]]]]:
-    sections = [
-        ("Çalışan ve iş bilgileri", [
-            "Çalışanın Adı Soyadı", "T.C. Kimlik No", "Doğum Yeri", "Doğum Tarihi",
-            "Cinsiyeti", "Eğitim Durumu", "Medeni Durumu", "Tel (Cep)", "Ev Adresi",
-            "Mesleği", "Yaptığı İş", "Çalıştığı Bölüm",
-        ]),
-        ("Önceki işler", [
-            "Önceki İş 1 - İşyeri", "Önceki İş 1 - İşkolu", "Önceki İş 1 - Yaptığı İş/Mesleği",
-            "Önceki İş 1 - Giriş-Çıkış", "Önceki İş 2 - İşyeri", "Önceki İş 2 - İşkolu",
-            "Önceki İş 2 - Yaptığı İş/Mesleği", "Önceki İş 2 - Giriş-Çıkış",
-        ]),
-        ("Sağlık geçmişi", [
-            "Bilinen Alerji Öyküsü", "Konjenital / Kronik Hastalık", "Kan Grubu", "Rh",
-            "Tetanoz", "Hepatit A", "Hepatit B", "Diğer Aşı", "Soygeçmiş - Anne",
-            "Soygeçmiş - Baba", "Soygeçmiş - Kardeş", "Soygeçmiş - Çocuk",
-        ]),
-        ("Ölçümler", ["TA", "Nabız", "Boy", "Kilo", "BMI", "Form Tarihi"]),
-        ("Muayene ve sonuç", [
-            "a) Göz", "a) Kulak-Burun-Boğaz", "a) Deri", "b) Kardiyovasküler Sistem",
-            "c) Solunum Sistemi", "d) Sindirim Sistemi", "e) Ürogenital Sistem",
-            "f) Kas-İskelet Sistemi", "g) Nörolojik Muayene", "h) Psikiyatrik Muayene",
-            "i) Diğer Muayene", "Kanaat ve Sonuç",
-        ]),
-    ]
-    result = []
-    for title, keys in sections:
-        values = [(key, record.get(key, "")) for key in keys if record.get(key, "") not in (None, "")]
-        if values:
-            result.append((title, values))
-    return result
+    """Kart bölümleri form şemasından gelir (matbu formdaki sırayla); boş alanlar kartta görünmez."""
+    sections: dict[str, list[tuple[str, object]]] = {}
+    for _key, label, page, section in FORM_SCHEMA:
+        value = record.get(label, "")
+        if value not in (None, ""):
+            sections.setdefault(f"Sayfa {page} · {section}", []).append((label, value))
+    return list(sections.items())
 
 
 def simplified_fields(record: dict) -> list[tuple[str, object]]:
     keys = [
-        "Çalışanın Adı Soyadı", "T.C. Kimlik No", "Doğum Yeri", "Doğum Tarihi",
-        "Cinsiyeti", "Eğitim Durumu", "Medeni Durumu", "Tel (Cep)", "Ev Adresi",
-        "Mesleği", "Yaptığı İş", "Çalıştığı Bölüm", "Kan Grubu", "Rh",
-        "Bilinen Alerji Öyküsü", "Konjenital / Kronik Hastalık", "TA", "Nabız",
-        "Boy", "Kilo", "Form Tarihi",
+        "Adı Soyadı", "T.C. Kimlik No", "Doğum Yeri ve Tarihi", "Cinsiyeti", "Eğitim Durumu",
+        "Medeni Durumu", "Tel (Cep)", "Ev Adresi", "Mesleği", "Yaptığı İş", "Çalıştığı Bölüm",
+        "Kan Grubu", "Bilinen Alerji Öyküsü", "Konjenital / Kronik Hastalık", "TA (tansiyon)",
+        "Nabız", "Boy", "Kilo", "Onay Tarihi",
     ]
     return [(key, record.get(key, "")) for key in keys if record.get(key, "") not in (None, "")]
+
+
+def write_ocr_ground_truth(batch_path: Path, records: list[dict]) -> None:
+    """faz1-trocr-main data/cikti/ground_truth/ biçimi: <OCR ID>.json, düz {alan: değer}.
+    Taramalar <OCR ID>1.jpeg / <OCR ID>2.jpeg olarak adlandırılır."""
+    target = batch_path / "ocr_ground_truth"
+    target.mkdir(exist_ok=True)
+    for record in records:
+        (target / f"{record['OCR ID']}.json").write_text(
+            json.dumps(ocr_ground_truth(record), ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 @app.get("/")
@@ -97,31 +83,40 @@ def create_batch():
         count = int(request.form.get("count", "50"))
         fill_rate = int(request.form.get("fill_rate", "90"))
         doctor_profile = request.form.get("doctor_profile", "random")
+        repeat_rate = int(request.form.get("repeat_rate", "10"))
+        test_count = int(request.form.get("test_count", "10" if count >= 20 else "0"))
+        if not 0 <= test_count < count:
+            raise ValueError("Test seti form sayısı 0 ile toplamın bir eksiği arasında olmalıdır.")
         start_number = reserve_sequence(SEQUENCE_PATH, count)
+        # Kişi numarası (ve sentetik TC) Form ID aralığından gelir → batch'ler arasında çakışmaz.
         records = generate_records(
             count=count,
             fill_rate=fill_rate,
             doctor_profile=doctor_profile,
             start_index=start_number,
+            repeat_rate=repeat_rate,
         )
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         batch_id = f"BATCH-{timestamp}"
         for offset, record in enumerate(records):
             form_number = start_number + offset
-            form_id = f"FORM-{form_number:05d}"
-            record["Form ID"] = form_id
-            record["Kayıt No"] = form_id
+            record["Form ID"] = f"FORM-{form_number:05d}"
+            record["OCR ID"] = f"sfg{form_number:05d}"
+        test_ids = assign_test_split(records, test_count)
         metadata = {
             "created_at": datetime.now().isoformat(timespec="seconds"),
             "count": count,
             "fill_rate": fill_rate,
             "doctor_profile": doctor_profile,
+            "repeat_rate": repeat_rate,
+            "test_form_ids": test_ids,
             "first_form_id": f"FORM-{start_number:05d}",
             "last_form_id": f"FORM-{start_number + count - 1:05d}",
         }
         save_batch(BATCH_DIR, batch_id, records, metadata)
         batch_path = BATCH_DIR / batch_id
         create_excel(records, batch_path / "ground_truth.xlsx")
+        write_ocr_ground_truth(batch_path, records)
         validation = validate_batch(BATCH_DIR, batch_id)
         if not validation["ok"]:
             raise RuntimeError("Batch doğrulaması başarısız: " + "; ".join(validation["errors"]))
