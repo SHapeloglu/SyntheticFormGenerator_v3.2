@@ -45,3 +45,8 @@
 **Açık sorunlar:** ...
 **Sıradaki adım:** ...
 ```
+
+## 2026-10-23 — kart sırası, tam dolu mod, kısa ev adresi
+**Yapılanlar:** (1) Kartlar matbu formun okuma sırasında (sayfa, yukarıdan aşağı, soldan sağa; `MATBU_SIRA`, faz1 `sablon_koordinatlari.json`'dan) — 92 alandan 20'si eski sıradan farklıydı (soygeçmiş, Hayır daireleri). (2) `fill_rate=100` artık **tam dolu**: muayene, tetkik, anamnez, aşı, bilgi kutuları hep dolu (kalan boşlar "Yok"); Hayır daireli sorular (hastanede yattınız mı, sigara, alkol…) ve TA diastolik kutusu doğal olarak boş kalır. (3) **Bekârda çocuk soygeçmişi hiçbir modda yazılmaz.** (4) **Ev adresi yalnız ilçe ve il** ("Buca / İzmir"); mahalle/sokak yok (işveren adresi aynı kaldı).
+**Kararlar / neden:** Eski %100 seçeneğinde bile alanların ~%27'si boştu (muayene/tetkik olasılıkları sabitti, gerçek hekim boşluğunu taklit ediyordu). Gönüllünün kartı boş formda atlamadan doldurması ve OCR'a dolu veri vermesi için tam dolu mod eklendi; %85-90 seçenekleri eski davranışta.
+**Sıradaki adım:** 50 yeni form üret (doluluk %100), PDF'e çevir, doldurulup taranınca `ocr_ground_truth/*.json` faz1'e (önce üretici batch'i EK-2 kayıtlarıyla eşleştirilebilir: etiketleme önerisi olarak kullanılabilir).

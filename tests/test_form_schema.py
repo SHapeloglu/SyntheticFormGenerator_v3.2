@@ -82,3 +82,28 @@ def test_batch_ocr_dosyalari_ve_kartlar(tmp_path, monkeypatch):
     assert kartlar.count("TEST SETİ") == 4
     assert "Hayır'ı daire içine al" in kartlar
     assert client.post("/batch/create", data={"count": "5", "test_count": "5"}).status_code == 400
+
+
+def test_kart_matbu_form_sirasinda():
+    from services.data_generator import MATBU_SIRA
+    assert [k for k, *_ in FORM_SCHEMA] == MATBU_SIRA
+
+
+def test_tam_dolu_ve_bekar_cocuk_ve_kisa_ev_adresi():
+    random.seed(11)
+    kayitlar = generate_records(120, fill_rate=100)
+    for kayit in kayitlar:
+        # Hayır daireli sorular ve TA kutusu hariç hiçbir kutu boş kalmaz (çocuk: bekârda boş)
+        for anahtar, etiket, *_ in FORM_SCHEMA:
+            if anahtar.endswith("_hayir") or anahtar == "ta_diastolik":
+                continue
+            if kayit.get(f"{etiket} → Hayır'ı daire içine al") == "Hayır":
+                continue
+            if anahtar == "soygecmisi_cocuk" and kayit["Medeni Durumu"].startswith("Bek"):
+                assert kayit[etiket] == ""
+                continue
+            soru_hayir = [e for k, e, *_ in FORM_SCHEMA if k == anahtar + "_hayir"]
+            if soru_hayir and kayit[soru_hayir[0]] == "Hayır":
+                continue
+            assert kayit[etiket] != "", etiket
+        assert not any(s in kayit["Ev Adresi"] for s in ("Sok", "Mah", "No:"))

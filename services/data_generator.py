@@ -119,6 +119,32 @@ FORM_SCHEMA: list[tuple[str, str, int, str]] = [
     ("hekim_adi_soyadi", "Hekim Adı Soyadı", 2, "Sonuç"),
 ]
 
+# Matbu formdaki okuma sırası: sayfa, yukarıdan aşağı, soldan sağa (faz1 sablon_koordinatlari.json'dan).
+# Kartlar bu sırayla çıkar; böylece kartı boş formda yukarıdan aşağı doldururken atlama olmaz.
+MATBU_SIRA = [
+    "isveren_unvani", "sgk_sicilno", "isveren_adresi", "calisan_adi_soyadi", "calisan_tc_no",
+    "calisan_dogumyeri_ve_tarihi", "calisan_cinsiyet", "calisan_egitim_durumu", "calisan_ev_adresi",
+    "calisan_meslegi", "calisan_medeni_durumu", "calisan_cep_tel", "calisan_yaptigi_is", "calisan_calistigi_bolum",
+    "daha_once_yer", "daha_once_iskolu", "daha_once_yaptigi_is", "daha_once_giris_cikis_tarihi", "kan_grubu",
+    "bilinen_alerji_oykusu", "konjenital_kronik_hastalik", "bagisiklama_tetanoz", "bagisiklama_hepatit_a",
+    "bagisiklama_hepatit_b", "bagisiklama_diger", "soygecmisi_baba", "soygecmisi_kardes", "soygecmisi_cocuk",
+    "soygecmisi_anne", "anamnez1_balgamli_oksuruk", "anamnez1_nefes_darligi", "anamnez1_gogus_agrisi",
+    "anamnez1_carpinti", "anamnez1_sirt_agrisi", "anamnez1_ishal_kabizlik", "anamnez1_eklemlerde_agri",
+    "anamnez1_diger", "anamnez2_kalp_hastaligi", "anamnez2_seker_hastaligi", "anamnez2_sarilik",
+    "anamnez2_bobrek_hastaligi", "anamnez2_mide_ulser", "anamnez2_isitme_kaybi", "anamnez2_gorme_bozuklugu",
+    "anamnez2_sinir_sistemi", "anamnez2_deri_hastaligi", "anamnez2_besin_zehirlenmesi", "anamnez2_diger",
+    "hastanede_yattiniz_mi_hayir", "hastanede_yattiniz_mi", "ameliyat_oldunuz_mu_hayir", "ameliyat_oldunuz_mu",
+    "is_kazasi_gecirdiniz_mi", "is_kazasi_gecirdiniz_mi_hayir", "meslek_hastaligi_suphesi",
+    "maluliyet_aldiniz_mi_hayir", "meslek_hastaligi_suphesi_hayir", "maluliyet_aldiniz_mi",
+    "su_anda_tedavi_goruyor_mu_hayir", "su_anda_tedavi_goruyor_mu", "sigara_iciyor_musunuz_hayir",
+    "sigara_iciyor_musunuz", "alkol_aliyor_musunuz_hayir", "alkol_aliyor_musunuz", "muayene_goz", "muayene_kbb",
+    "muayene_deri", "muayene_kardiyovaskuler", "muayene_solunum", "muayene_sindirim", "muayene_urogenital",
+    "muayene_kas_iskelet", "muayene_norolojik", "muayene_psikiyatrik", "muayene_diger", "ta", "ta_diastolik", "nb",
+    "boy", "kilo", "bmi", "lab_kan", "lab_idrar", "lab_gaita", "lab_radyolojik", "lab_odyometre", "lab_sft",
+    "lab_psikolojik", "lab_diger", "kanaat_sonuc", "onay_tarihi", "hekim_adi_soyadi",
+]
+FORM_SCHEMA.sort(key=lambda satir: MATBU_SIRA.index(satir[0]))
+
 OCR_FIELD_BY_LABEL = {label: key for key, label, _page, _section in FORM_SCHEMA}
 SCHEMA_LABELS = [label for _key, label, _page, _section in FORM_SCHEMA]
 
@@ -356,8 +382,12 @@ def synthetic_tc(index: int) -> str:
     return "".join(map(str, first9 + [tenth, eleventh]))
 
 
+# fill_rate=100 → "tam dolu": gerçekçi boş bırakma yok, her kutuya bir değer yazılır (generate_form ayarlar).
+_TAM_DOLU = False
+
+
 def maybe(value: Any, probability: float) -> Any:
-    return value if random.random() < probability else ""
+    return value if _TAM_DOLU or random.random() < probability else ""
 
 
 def choose_profile(requested: str) -> str:
@@ -388,10 +418,7 @@ def generate_identity(index: int, optional_rate: float, first_exam: date) -> dic
     # İlk muayenede 18–58 yaş (hekim.md: geçerli yaş aralığı 15–75)
     birth = biased_date(date(first_exam.year - 58, 1, 1), date(first_exam.year - 18, first_exam.month, min(first_exam.day, 28)))
     district = random.choice(IZMIR_DISTRICTS)
-    address = random.choice([
-        f"{district} / İzmir", district, f"{random.choice(NEIGHBORHOODS)} Mah. {district}",
-        f"{random.randint(1000, 9999)} Sok. No:{random.randint(1, 80)} {district}",
-    ])
+    address = random.choice([f"{district} / İzmir", f"{district} İzmir", f"{district}/İzmir"])  # ev adresi: yalnız ilçe ve il, mahalle/sokak yok
     height = random.randint(165, 192) if gender == "Erkek" else random.randint(152, 176)
     conditions = random.sample(CONDITIONS, k=random.choices([0, 1, 2], weights=[62, 30, 8])[0])
     return {
@@ -464,7 +491,7 @@ def anamnez_cell(field: str, identity: dict[str, Any], profile: str, exam_date: 
     roll = random.random()
     if roll < NFM_RATE[profile]:
         return "NFM"
-    return "Hayır" if roll < NFM_RATE[profile] + 0.10 else ""
+    return "Hayır" if _TAM_DOLU or roll < NFM_RATE[profile] + 0.10 else ""
 
 
 def history_answers(identity: dict[str, Any], exam_date: date, fill: float) -> dict[str, tuple[str, str]]:
@@ -527,6 +554,8 @@ def vaccine_values(exam_date: date, rate: float) -> dict[str, str]:
 
 def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, profile: str,
                   fill_rate: int, employer: tuple[str, str], doctor: str, job: dict[str, str]) -> dict[str, Any]:
+    global _TAM_DOLU
+    _TAM_DOLU = fill_rate >= 100
     rate = max(0.30, min(1.0, fill_rate / 100))
     age = exam_date.year - identity["birth"].year
     weight = max(42, identity["base_weight"] + random.randint(-3, 3) + max(0, age - 35) // 6)
@@ -539,6 +568,8 @@ def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, pro
     previous = identity["previous"]
     district = random.choice(IZMIR_DISTRICTS)
     chronic = " + ".join(random.choice([c["name"], c["short"]]) for c in identity["conditions"])
+
+    bekar = str(identity["married"]).startswith("Bek")  # bekârın çocuk soygeçmişi yazılmaz (tam dolu modda da boş kalır)
 
     values: dict[str, Any] = {
         "isveren_unvani": maybe(employer[0], rate),
@@ -566,7 +597,7 @@ def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, pro
         "soygecmisi_anne": identity["family"]["anne"],
         "soygecmisi_baba": identity["family"]["baba"],
         "soygecmisi_kardes": identity["family"]["kardes"],
-        "soygecmisi_cocuk": identity["family"]["cocuk"] if age > 22 else "",
+        "soygecmisi_cocuk": "" if bekar else (identity["family"]["cocuk"] if age > 22 else ("Yok" if _TAM_DOLU else "")),
         "ta": f"{systolic}/{diastolic}",
         "ta_diastolik": "",
         "nb": random.randint(88, 110) if any(c["icd"] == "R00.0" for c in identity["conditions"]) else random.randint(58, 96),
@@ -587,16 +618,22 @@ def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, pro
 
     abnormal_rate = 0.10 + (0.05 if identity["conditions"] else 0)
     for key, variants in EXAM_FIELDS.items():
-        if random.random() >= EXAM_PROBABILITY[key]:
+        if not _TAM_DOLU and random.random() >= EXAM_PROBABILITY[key]:
             values[key] = ""
         elif random.random() < abnormal_rate:
             values[key] = random.choice(variants["abnormal"])
         else:
             values[key] = random.choice(variants[profile])
 
-    lab_probability = {"minimal": 0.25, "normal": 0.35, "detailed": 0.50}[profile]
+    lab_probability = 1.0 if _TAM_DOLU else {"minimal": 0.25, "normal": 0.35, "detailed": 0.50}[profile]
     for key, options in LAB_VALUES.items():
         values[key] = random.choice(options) if random.random() < lab_probability else ""
+
+    if _TAM_DOLU:  # kalan boşlar (ör. hastalığı olmayanın alerjisi, tedavisi) "Yok" yazılır; Hayır daireleri ve TA kutusu hariç
+        for key in values:
+            if (values[key] in (None, "") and not key.endswith("_hayir") and key not in ("ta_diastolik", "soygecmisi_cocuk")
+                    and values.get(f"{key}_hayir") != "Hayır"):
+                values[key] = "Yok"
 
     record: dict[str, Any] = {label: "" for label in META_LABELS}
     record.update({
