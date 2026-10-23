@@ -119,6 +119,32 @@ FORM_SCHEMA: list[tuple[str, str, int, str]] = [
     ("hekim_adi_soyadi", "Hekim Adı Soyadı", 2, "Sonuç"),
 ]
 
+# Matbu formdaki okuma sırası: sayfa, yukarıdan aşağı, soldan sağa (faz1 sablon_koordinatlari.json'dan).
+# Kartlar bu sırayla çıkar; böylece kartı boş formda yukarıdan aşağı doldururken atlama olmaz.
+MATBU_SIRA = [
+    "isveren_unvani", "sgk_sicilno", "isveren_adresi", "calisan_adi_soyadi", "calisan_tc_no",
+    "calisan_dogumyeri_ve_tarihi", "calisan_cinsiyet", "calisan_egitim_durumu", "calisan_ev_adresi",
+    "calisan_meslegi", "calisan_medeni_durumu", "calisan_cep_tel", "calisan_yaptigi_is", "calisan_calistigi_bolum",
+    "daha_once_yer", "daha_once_iskolu", "daha_once_yaptigi_is", "daha_once_giris_cikis_tarihi", "kan_grubu",
+    "bilinen_alerji_oykusu", "konjenital_kronik_hastalik", "bagisiklama_tetanoz", "bagisiklama_hepatit_a",
+    "bagisiklama_hepatit_b", "bagisiklama_diger", "soygecmisi_baba", "soygecmisi_kardes", "soygecmisi_cocuk",
+    "soygecmisi_anne", "anamnez1_balgamli_oksuruk", "anamnez1_nefes_darligi", "anamnez1_gogus_agrisi",
+    "anamnez1_carpinti", "anamnez1_sirt_agrisi", "anamnez1_ishal_kabizlik", "anamnez1_eklemlerde_agri",
+    "anamnez1_diger", "anamnez2_kalp_hastaligi", "anamnez2_seker_hastaligi", "anamnez2_sarilik",
+    "anamnez2_bobrek_hastaligi", "anamnez2_mide_ulser", "anamnez2_isitme_kaybi", "anamnez2_gorme_bozuklugu",
+    "anamnez2_sinir_sistemi", "anamnez2_deri_hastaligi", "anamnez2_besin_zehirlenmesi", "anamnez2_diger",
+    "hastanede_yattiniz_mi_hayir", "hastanede_yattiniz_mi", "ameliyat_oldunuz_mu_hayir", "ameliyat_oldunuz_mu",
+    "is_kazasi_gecirdiniz_mi", "is_kazasi_gecirdiniz_mi_hayir", "meslek_hastaligi_suphesi",
+    "maluliyet_aldiniz_mi_hayir", "meslek_hastaligi_suphesi_hayir", "maluliyet_aldiniz_mi",
+    "su_anda_tedavi_goruyor_mu_hayir", "su_anda_tedavi_goruyor_mu", "sigara_iciyor_musunuz_hayir",
+    "sigara_iciyor_musunuz", "alkol_aliyor_musunuz_hayir", "alkol_aliyor_musunuz", "muayene_goz", "muayene_kbb",
+    "muayene_deri", "muayene_kardiyovaskuler", "muayene_solunum", "muayene_sindirim", "muayene_urogenital",
+    "muayene_kas_iskelet", "muayene_norolojik", "muayene_psikiyatrik", "muayene_diger", "ta", "ta_diastolik", "nb",
+    "boy", "kilo", "bmi", "lab_kan", "lab_idrar", "lab_gaita", "lab_radyolojik", "lab_odyometre", "lab_sft",
+    "lab_psikolojik", "lab_diger", "kanaat_sonuc", "onay_tarihi", "hekim_adi_soyadi",
+]
+FORM_SCHEMA.sort(key=lambda satir: MATBU_SIRA.index(satir[0]))
+
 OCR_FIELD_BY_LABEL = {label: key for key, label, _page, _section in FORM_SCHEMA}
 SCHEMA_LABELS = [label for _key, label, _page, _section in FORM_SCHEMA]
 
@@ -198,6 +224,30 @@ EXTRA_ANAMNEZ = {
     "anamnez1_ishal_kabizlik": ("İrritabl Bağırsak", "K58"),
     "anamnez2_sarilik": ("Hepatit A", "B15"),
     "anamnez2_besin_zehirlenmesi": ("Besin Zehirlenmesi", "A05.9"),
+}
+
+# Tam dolu modda anamnez hücreleri NFM yerine çoğunlukla kısa, alana özgü cevap alır (olumsuz ya da hafif olumlu).
+_ANA_GENEL = ["Yok", "Hayır", "Şikayeti yok", "Yakınması yok", "Belirtilmedi", "Negatif"]
+ANAMNEZ_ZENGIN = {
+    "anamnez1_balgamli_oksuruk": ["Öksürük yok", "Balgam yok", "Sigaraya bağlı sabah öksürüğü", "Soğuk algınlığında", "Ara sıra"],
+    "anamnez1_nefes_darligi": ["Nefes darlığı yok", "Efor ile hafif", "Merdivende", "Yok, efor tolere", "Mevsimsel"],
+    "anamnez1_gogus_agrisi": ["Göğüs ağrısı yok", "Ara sıra batıcı", "Efor ile yok", "Kas kaynaklı", "Yok, EKG normal"],
+    "anamnez1_carpinti": ["Çarpıntı yok", "Stres ile ara sıra", "Kahve sonrası", "Ara sıra", "Yok, nabız düzenli"],
+    "anamnez1_sirt_agrisi": ["Sırt ağrısı yok", "Uzun oturmada", "Ara sıra bel/sırt", "Ağır kaldırınca", "Hafif, ilaç almıyor"],
+    "anamnez1_ishal_kabizlik": ["Yok", "Ara sıra kabızlık", "Düzenli", "Stres ile ishal", "Şikayet yok, düzenli"],
+    "anamnez1_eklemlerde_agri": ["Eklem ağrısı yok", "Diz ağrısı ara sıra", "Soğukta", "Sabah tutukluğu yok", "Hafif, günlük aktivite sınırlı değil"],
+    "anamnez1_diger": ["Başka şikayet yok", "Baş ağrısı ara sıra", "Yok", "Gece uyanması yok", "Göz yorgunluğu"],
+    "anamnez2_kalp_hastaligi": ["Kalp hastalığı yok", "Yok, EKG normal", "Aile öyküsü var", "Geçirmemiş", "Yok"],
+    "anamnez2_seker_hastaligi": ["DM yok", "Şeker hastalığı yok", "Ailede var", "Açlık şekeri normal", "Yok"],
+    "anamnez2_sarilik": ["Geçirmemiş", "Sarılık yok", "Çocuklukta geçirmiş", "Hepatit B aşılı", "Yok"],
+    "anamnez2_bobrek_hastaligi": ["Böbrek hastalığı yok", "Taş öyküsü yok", "Geçirmemiş", "İdrar tahlili normal", "Yok"],
+    "anamnez2_mide_ulser": ["Ülser yok", "Reflü şikayeti", "Gastrit öyküsü", "Geçirmemiş", "Yok"],
+    "anamnez2_isitme_kaybi": ["İşitme kaybı yok", "Odyometri normal", "Gürültüde zorlanıyor", "Geçirmemiş", "Yok"],
+    "anamnez2_gorme_bozuklugu": ["Gözlük kullanıyor", "Miyopi", "Görme bozukluğu yok", "Astigmat", "Yok"],
+    "anamnez2_sinir_sistemi": ["Sinir sistemi hastalığı yok", "Migren", "Epilepsi yok", "Geçirmemiş", "Yok"],
+    "anamnez2_deri_hastaligi": ["Deri hastalığı yok", "Egzama öyküsü", "Alerjik cilt", "Geçirmemiş", "Yok"],
+    "anamnez2_besin_zehirlenmesi": ["Geçirmemiş", "Besin zehirlenmesi yok", "Yaz aylarında bir kez", "Yok", "Hayır"],
+    "anamnez2_diger": ["Başka hastalık yok", "Yok", "Hipotiroidi", "Geçirmemiş", "Kronik hastalığı yok"],
 }
 
 ALLERGIES = ["Yok", "Polen", "Ev tozu", "Penisilin", "Lateks", "Mevsimsel", "Polen alerjisi", "Toz akarı", "Aspirin", "Kedi tüyü"]
@@ -314,6 +364,8 @@ PROFILE_WEIGHTS = ["minimal"] * 4 + ["normal"] * 4 + ["detailed"] * 2
 
 # Yazım profiline göre: tablolarda "NFM" yazma eğilimi (gerçek formlarda anamnez hücrelerinin ~%85'i NFM).
 NFM_RATE = {"minimal": 0.85, "normal": 0.70, "detailed": 0.55}
+NFM_TIK_ORANI = 0.15   # anamnez hücresinde NFM yerine ✓
+NFM_N_ORANI = 0.15     # anamnez hücresinde NFM yerine N
 
 
 # ---------------------------------------------------------------------------
@@ -356,8 +408,18 @@ def synthetic_tc(index: int) -> str:
     return "".join(map(str, first9 + [tenth, eleventh]))
 
 
+# fill_rate=100 → "tam dolu": gerçekçi boş bırakma yok, her kutuya bir değer yazılır (generate_form ayarlar).
+_TAM_DOLU = False
+TAM_DOLU_MIN = 0.65  # tam dolu modda bir formda dolu kutu oranının alt sınırı
+# Kimlik, ölçüm ve sonuç alanları rastgele boşaltılmaz (kimlik/ölçüm olmadan form anlamsız olur).
+DOLDURMA_KORUMALI = {
+    "calisan_adi_soyadi", "calisan_tc_no", "calisan_dogumyeri_ve_tarihi", "calisan_cinsiyet", "calisan_cep_tel", "kan_grubu",
+    "ta", "ta_diastolik", "nb", "boy", "kilo", "onay_tarihi", "kanaat_sonuc", "hekim_adi_soyadi",
+}
+
+
 def maybe(value: Any, probability: float) -> Any:
-    return value if random.random() < probability else ""
+    return value if _TAM_DOLU or random.random() < probability else ""
 
 
 def choose_profile(requested: str) -> str:
@@ -388,10 +450,7 @@ def generate_identity(index: int, optional_rate: float, first_exam: date) -> dic
     # İlk muayenede 18–58 yaş (hekim.md: geçerli yaş aralığı 15–75)
     birth = biased_date(date(first_exam.year - 58, 1, 1), date(first_exam.year - 18, first_exam.month, min(first_exam.day, 28)))
     district = random.choice(IZMIR_DISTRICTS)
-    address = random.choice([
-        f"{district} / İzmir", district, f"{random.choice(NEIGHBORHOODS)} Mah. {district}",
-        f"{random.randint(1000, 9999)} Sok. No:{random.randint(1, 80)} {district}",
-    ])
+    address = random.choice([f"{district} / İzmir", f"{district} İzmir", f"{district}/İzmir"])  # ev adresi: yalnız ilçe ve il, mahalle/sokak yok
     height = random.randint(165, 192) if gender == "Erkek" else random.randint(152, 176)
     conditions = random.sample(CONDITIONS, k=random.choices([0, 1, 2], weights=[62, 30, 8])[0])
     return {
@@ -412,10 +471,10 @@ def generate_identity(index: int, optional_rate: float, first_exam: date) -> dic
         "allergy": maybe(random.choice(ALLERGIES), optional_rate - 0.25),
         "conditions": conditions,
         "family": {k: maybe(random.choice(v), optional_rate if k in ("anne", "baba") else optional_rate - 0.2) for k, v in FAMILY.items()},
-        "smoker": random.choices(["hayir", "evet", "birakmis"], weights=[55, 33, 12])[0],
+        "smoker": random.choices(["hayir", "evet", "birakmis"], weights=[25, 45, 30] if _TAM_DOLU else [55, 33, 12])[0],
         "smoke_qty": random.choice([1, 5, 10, 10, 15, 20, 20, 30]),
         "smoke_since": random.randint(birth.year + 15, first_exam.year - 1),
-        "alcohol": random.choices(["hayir", "evet", "sosyal"], weights=[70, 15, 15])[0],
+        "alcohol": random.choices(["hayir", "evet", "sosyal"], weights=[35, 30, 35] if _TAM_DOLU else [70, 15, 15])[0],
         "previous": previous_jobs(birth.year, first_exam.year, optional_rate),
     }
 
@@ -461,10 +520,21 @@ def anamnez_cell(field: str, identity: dict[str, Any], profile: str, exam_date: 
     if field in EXTRA_ANAMNEZ and random.random() < 0.04:
         name, icd = EXTRA_ANAMNEZ[field]
         return f"{name} ({icd})"
+    if _TAM_DOLU:  # NFM yerine alana özgü kısa cevap; NFM/N/✓ azınlıkta kalır
+        roll = random.random()
+        if roll < 0.15:
+            return "NFM"
+        if roll < 0.22:
+            return "N"
+        if roll < 0.29:
+            return "✓"
+        return random.choice(ANAMNEZ_ZENGIN.get(field, _ANA_GENEL) + _ANA_GENEL[:2])
     roll = random.random()
     if roll < NFM_RATE[profile]:
-        return "NFM"
-    return "Hayır" if roll < NFM_RATE[profile] + 0.10 else ""
+        # NFM yazılacak hücrelerin bir kısmına hekimler tik ya da N koyar
+        r2 = random.random()
+        return "✓" if r2 < NFM_TIK_ORANI else "N" if r2 < NFM_TIK_ORANI + NFM_N_ORANI else "NFM"
+    return "Hayır" if _TAM_DOLU or roll < NFM_RATE[profile] + 0.10 else ""
 
 
 def history_answers(identity: dict[str, Any], exam_date: date, fill: float) -> dict[str, tuple[str, str]]:
@@ -480,6 +550,19 @@ def history_answers(identity: dict[str, Any], exam_date: date, fill: float) -> d
     rates = {"hastanede_yattiniz_mi": 0.15, "ameliyat_oldunuz_mu": 0.18, "is_kazasi_gecirdiniz_mi": 0.07,
              "meslek_hastaligi_suphesi": 0.03, "maluliyet_aldiniz_mi": 0.02}
     treat = [c["treat"] for c in identity["conditions"] if c["treat"]]
+    if _TAM_DOLU:  # tam dolu kartlarda öykü bölümü "Hayır"dan zengin: çoğu kutuda kısa açıklama yazılır
+        for k, ek in {
+            "hastanede_yattiniz_mi": ["Gastroenterit 2019", "Kırık tedavisi", "Renal kolik", "Gözlem 1 gün", "Tonsillit", "Migren atağı"],
+            "ameliyat_oldunuz_mu": ["Burun ameliyatı", "Safra kesesi 2020", "Dış çekimi", "Katarakt", "Tırnak ameliyatı", "Kist eksizyonu"],
+            "is_kazasi_gecirdiniz_mi": ["Gözüne kıymık", "Elini kesti 2022", "Merdivenden düştü", "Yanık", "Bel burkulması"],
+            "meslek_hastaligi_suphesi": ["Solunum tetkiki yapıldı", "Odyometri normal", "Cilt tetkiki", "Yok, takipte"],
+            "maluliyet_aldiniz_mi": ["Yok, başvurmadı", "%10 oran", "Rapor aldı"],
+        }.items():
+            texts[k] = texts[k] + ek
+        rates = {"hastanede_yattiniz_mi": 0.50, "ameliyat_oldunuz_mu": 0.55, "is_kazasi_gecirdiniz_mi": 0.35,
+                 "meslek_hastaligi_suphesi": 0.22, "maluliyet_aldiniz_mi": 0.15}
+        if not treat and random.random() < 0.45:
+            treat = [random.choice(["Vitamin D", "İnhaler", "Antihistaminik", "Ağrı kesici kullanıyor", "Demir tedavisi", "Fizik tedavi", "Reflü ilacı"])]
     result: dict[str, tuple[str, str]] = {}
     for key, options in texts.items():
         if key == "su_anda_tedavi_goruyor_mu":
@@ -509,7 +592,8 @@ def history_answers(identity: dict[str, Any], exam_date: date, fill: float) -> d
     if identity["alcohol"] == "evet":
         result["alkol_aliyor_musunuz"] = (random.choice(["1/5", "2/10", "1/20", "3/8", "1/1 2015"]), "")
     elif identity["alcohol"] == "sosyal":
-        result["alkol_aliyor_musunuz"] = (random.choice(["Sosyal", "Nadiren", "Ayda bir"]), "")
+        sosyal = ["Sosyal", "Nadiren", "Ayda bir"] + (["Haftada 1", "Hafta sonu", "Bayramlarda", "Ara sıra bira", "Özel günlerde", "Yemekte 1 kadeh"] if _TAM_DOLU else [])
+        result["alkol_aliyor_musunuz"] = (random.choice(sosyal), "")
     else:
         result["alkol_aliyor_musunuz"] = ("", "Hayır" if random.random() < fill else "")
     return result
@@ -527,6 +611,8 @@ def vaccine_values(exam_date: date, rate: float) -> dict[str, str]:
 
 def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, profile: str,
                   fill_rate: int, employer: tuple[str, str], doctor: str, job: dict[str, str]) -> dict[str, Any]:
+    global _TAM_DOLU
+    _TAM_DOLU = fill_rate >= 100
     rate = max(0.30, min(1.0, fill_rate / 100))
     age = exam_date.year - identity["birth"].year
     weight = max(42, identity["base_weight"] + random.randint(-3, 3) + max(0, age - 35) // 6)
@@ -539,6 +625,8 @@ def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, pro
     previous = identity["previous"]
     district = random.choice(IZMIR_DISTRICTS)
     chronic = " + ".join(random.choice([c["name"], c["short"]]) for c in identity["conditions"])
+
+    bekar = str(identity["married"]).startswith("Bek")  # bekârın çocuk soygeçmişi yazılmaz (tam dolu modda da boş kalır)
 
     values: dict[str, Any] = {
         "isveren_unvani": maybe(employer[0], rate),
@@ -566,9 +654,9 @@ def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, pro
         "soygecmisi_anne": identity["family"]["anne"],
         "soygecmisi_baba": identity["family"]["baba"],
         "soygecmisi_kardes": identity["family"]["kardes"],
-        "soygecmisi_cocuk": identity["family"]["cocuk"] if age > 22 else "",
-        "ta": f"{systolic}/{diastolic}",
-        "ta_diastolik": "",
+        "soygecmisi_cocuk": "" if bekar else (identity["family"]["cocuk"] if age > 22 else ("Yok" if _TAM_DOLU else "")),
+        "ta": f"{systolic}",            # matbu formda "TA: [sistolik] / [diastolik] mmHg": diastolik mmHg kutusuna yazılır
+        "ta_diastolik": f"{diastolic}",
         "nb": random.randint(88, 110) if any(c["icd"] == "R00.0" for c in identity["conditions"]) else random.randint(58, 96),
         "boy": identity["height"],
         "kilo": weight,
@@ -587,16 +675,32 @@ def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, pro
 
     abnormal_rate = 0.10 + (0.05 if identity["conditions"] else 0)
     for key, variants in EXAM_FIELDS.items():
-        if random.random() >= EXAM_PROBABILITY[key]:
+        if not _TAM_DOLU and random.random() >= EXAM_PROBABILITY[key]:
             values[key] = ""
         elif random.random() < abnormal_rate:
             values[key] = random.choice(variants["abnormal"])
         else:
             values[key] = random.choice(variants[profile])
 
-    lab_probability = {"minimal": 0.25, "normal": 0.35, "detailed": 0.50}[profile]
+    lab_probability = 1.0 if _TAM_DOLU else {"minimal": 0.25, "normal": 0.35, "detailed": 0.50}[profile]
     for key, options in LAB_VALUES.items():
         values[key] = random.choice(options) if random.random() < lab_probability else ""
+
+    if _TAM_DOLU:  # kalan boşlar (ör. hastalığı olmayanın alerjisi, tedavisi) "Yok" yazılır; Hayır daireleri ve TA kutusu hariç
+        for key in values:
+            if (values[key] in (None, "") and not key.endswith("_hayir") and key != "soygecmisi_cocuk"
+                    and values.get(f"{key}_hayir") != "Hayır"):
+                values[key] = "Yok"
+
+    if _TAM_DOLU:  # her formun doluluğu %65-100 arasında rastgele: hekimler her zaman her kutuyu doldurmaz
+        hedef = round(random.uniform(TAM_DOLU_MIN, 1.0) * len(FORM_SCHEMA))
+        dolu = [k for k, *_ in FORM_SCHEMA if values.get(k) not in (None, "")]
+        aday = [k for k in dolu if k not in DOLDURMA_KORUMALI]
+        random.shuffle(aday)
+        while len(dolu) > hedef and aday:
+            k = aday.pop()
+            values[k] = ""
+            dolu.remove(k)
 
     record: dict[str, Any] = {label: "" for label in META_LABELS}
     record.update({
@@ -615,6 +719,8 @@ def generate_records(count: int, fill_rate: int = 85, doctor_profile: str = "ran
                      start_index: int = 1, repeat_rate: int = 10) -> list[dict[str, Any]]:
     """`count` form üretir; ~`repeat_rate`% form daha önceki bir kişinin sonraki muayenesidir
     (aynı kimlik, daha geç onay tarihi, periyodik / iş değişikliği / işe dönüş)."""
+    global _TAM_DOLU
+    _TAM_DOLU = fill_rate >= 100  # kimlik üretimi de tam dolu modda zenginleşir (sigara/alkol dağılımı)
     if count < 1:
         raise ValueError("Kayıt sayısı en az 1 olmalıdır.")
     if count > 50_000:
