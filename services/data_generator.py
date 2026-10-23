@@ -796,5 +796,7 @@ def ocr_ground_truth(record: dict[str, Any]) -> dict[str, str]:
     result = {}
     for key, label, _page, _section in FORM_SCHEMA:
         value = str(record.get(label, "")).strip()
+        if value == "✓":  # faz1 etiket kuralı: hücrede yalnız tik = NFM (kart ve Excel ✓ gösterir, OCR etiketi NFM)
+            value = "NFM"
         result[key] = value if value else "boş"
     return result
