@@ -340,6 +340,8 @@ PROFILE_WEIGHTS = ["minimal"] * 4 + ["normal"] * 4 + ["detailed"] * 2
 
 # Yazım profiline göre: tablolarda "NFM" yazma eğilimi (gerçek formlarda anamnez hücrelerinin ~%85'i NFM).
 NFM_RATE = {"minimal": 0.85, "normal": 0.70, "detailed": 0.55}
+NFM_TIK_ORANI = 0.15   # anamnez hücresinde NFM yerine ✓
+NFM_N_ORANI = 0.15     # anamnez hücresinde NFM yerine N
 
 
 # ---------------------------------------------------------------------------
@@ -490,7 +492,9 @@ def anamnez_cell(field: str, identity: dict[str, Any], profile: str, exam_date: 
         return f"{name} ({icd})"
     roll = random.random()
     if roll < NFM_RATE[profile]:
-        return "NFM"
+        # NFM yazılacak hücrelerin bir kısmına hekimler tik ya da N koyar
+        r2 = random.random()
+        return "✓" if r2 < NFM_TIK_ORANI else "N" if r2 < NFM_TIK_ORANI + NFM_N_ORANI else "NFM"
     return "Hayır" if _TAM_DOLU or roll < NFM_RATE[profile] + 0.10 else ""
 
 

@@ -107,3 +107,9 @@ def test_tam_dolu_ve_bekar_cocuk_ve_kisa_ev_adresi():
                 continue
             assert kayit[etiket] != "", etiket
         assert not any(s in kayit["Ev Adresi"] for s in ("Sok", "Mah", "No:"))
+
+
+def test_anamnezde_nfm_yerine_tik_ve_n_da_var():
+    random.seed(21)
+    degerler = [k[e] for k in generate_records(200, fill_rate=100) for a, e, *_ in FORM_SCHEMA if a.startswith("anamnez")]
+    assert degerler.count("NFM") > 0 and degerler.count("✓") > 0 and degerler.count("N") > 0
