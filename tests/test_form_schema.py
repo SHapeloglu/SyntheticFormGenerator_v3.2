@@ -27,7 +27,9 @@ def test_tutarlilik_ve_bicimler():
             yas = int(kayit["Onay Tarihi"][-4:]) - int(dogum[-4:])
             assert 17 <= yas <= 66
             assert re.fullmatch(r"05\d{9}", kayit["Tel (Cep)"])
-            assert re.fullmatch(r"\d{2,3}/\d{2,3}", kayit["TA (tansiyon)"])
+            assert re.fullmatch(r"\d{2,3}", kayit["TA (tansiyon)"])
+            assert re.fullmatch(r"\d{2,3}", kayit["TA diastolik kutusu"])  # mmHg kutusu artık dolu
+            assert int(kayit["TA diastolik kutusu"]) < int(kayit["TA (tansiyon)"])
             assert re.fullmatch(r"(A|B|AB|0) [+-]", kayit["Kan Grubu"])
             for anahtar, etiket, *_ in FORM_SCHEMA:
                 if anahtar.endswith("_hayir"):
@@ -64,7 +66,8 @@ def test_test_seti_kisiyi_bolmez():
 def test_ocr_ground_truth_bos_kutu():
     random.seed(7)
     gt = ocr_ground_truth(generate_records(1, fill_rate=0)[0])
-    assert gt["ta_diastolik"] == "boş"
+    assert "boş" in gt.values()
+    assert gt["ta_diastolik"] != "boş"
     assert "" not in gt.values()
 
 
@@ -89,27 +92,26 @@ def test_kart_matbu_form_sirasinda():
     assert [k for k, *_ in FORM_SCHEMA] == MATBU_SIRA
 
 
-def test_tam_dolu_ve_bekar_cocuk_ve_kisa_ev_adresi():
+def test_tam_dolu_65_ile_100_arasi_rastgele_ve_bekar_cocuk_ve_kisa_ev_adresi():
     random.seed(11)
-    kayitlar = generate_records(120, fill_rate=100)
+    kayitlar = generate_records(200, fill_rate=100)
+    oranlar = []
     for kayit in kayitlar:
-        # Hayır daireli sorular ve TA kutusu hariç hiçbir kutu boş kalmaz (çocuk: bekârda boş)
-        for anahtar, etiket, *_ in FORM_SCHEMA:
-            if anahtar.endswith("_hayir") or anahtar == "ta_diastolik":
-                continue
-            if kayit.get(f"{etiket} → Hayır'ı daire içine al") == "Hayır":
-                continue
-            if anahtar == "soygecmisi_cocuk" and kayit["Medeni Durumu"].startswith("Bek"):
-                assert kayit[etiket] == ""
-                continue
-            soru_hayir = [e for k, e, *_ in FORM_SCHEMA if k == anahtar + "_hayir"]
-            if soru_hayir and kayit[soru_hayir[0]] == "Hayır":
-                continue
-            assert kayit[etiket] != "", etiket
+        dolu = sum(1 for _k, etiket, *_ in FORM_SCHEMA if kayit[etiket] != "")
+        oranlar.append(dolu / len(FORM_SCHEMA))
+        if kayit["Medeni Durumu"].startswith("Bek"):
+            assert kayit["Soygeçmiş - Çocuk"] == ""
+        assert kayit["TA diastolik kutusu"] != ""  # ölçümler boşaltılmaz
         assert not any(s in kayit["Ev Adresi"] for s in ("Sok", "Mah", "No:"))
+    assert min(oranlar) >= 0.65
+    assert max(oranlar) - min(oranlar) > 0.15  # her formda farklı doluluk
+
 
 
 def test_anamnezde_nfm_yerine_tik_ve_n_da_var():
     random.seed(21)
     degerler = [k[e] for k in generate_records(200, fill_rate=100) for a, e, *_ in FORM_SCHEMA if a.startswith("anamnez")]
     assert degerler.count("NFM") > 0 and degerler.count("✓") > 0 and degerler.count("N") > 0
+    random.seed(22)
+    ham = [k[e] for k in generate_records(200, fill_rate=85) for a, e, *_ in FORM_SCHEMA if a.startswith("anamnez")]
+    assert ham.count("NFM") / len(ham) > 0.3  # %85 modunda NFM baskın kalır

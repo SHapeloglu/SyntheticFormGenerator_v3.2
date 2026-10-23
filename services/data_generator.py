@@ -226,6 +226,30 @@ EXTRA_ANAMNEZ = {
     "anamnez2_besin_zehirlenmesi": ("Besin Zehirlenmesi", "A05.9"),
 }
 
+# Tam dolu modda anamnez hücreleri NFM yerine çoğunlukla kısa, alana özgü cevap alır (olumsuz ya da hafif olumlu).
+_ANA_GENEL = ["Yok", "Hayır", "Şikayeti yok", "Yakınması yok", "Belirtilmedi", "Negatif"]
+ANAMNEZ_ZENGIN = {
+    "anamnez1_balgamli_oksuruk": ["Öksürük yok", "Balgam yok", "Sigaraya bağlı sabah öksürüğü", "Soğuk algınlığında", "Ara sıra"],
+    "anamnez1_nefes_darligi": ["Nefes darlığı yok", "Efor ile hafif", "Merdivende", "Yok, efor tolere", "Mevsimsel"],
+    "anamnez1_gogus_agrisi": ["Göğüs ağrısı yok", "Ara sıra batıcı", "Efor ile yok", "Kas kaynaklı", "Yok, EKG normal"],
+    "anamnez1_carpinti": ["Çarpıntı yok", "Stres ile ara sıra", "Kahve sonrası", "Ara sıra", "Yok, nabız düzenli"],
+    "anamnez1_sirt_agrisi": ["Sırt ağrısı yok", "Uzun oturmada", "Ara sıra bel/sırt", "Ağır kaldırınca", "Hafif, ilaç almıyor"],
+    "anamnez1_ishal_kabizlik": ["Yok", "Ara sıra kabızlık", "Düzenli", "Stres ile ishal", "Şikayet yok, düzenli"],
+    "anamnez1_eklemlerde_agri": ["Eklem ağrısı yok", "Diz ağrısı ara sıra", "Soğukta", "Sabah tutukluğu yok", "Hafif, günlük aktivite sınırlı değil"],
+    "anamnez1_diger": ["Başka şikayet yok", "Baş ağrısı ara sıra", "Yok", "Gece uyanması yok", "Göz yorgunluğu"],
+    "anamnez2_kalp_hastaligi": ["Kalp hastalığı yok", "Yok, EKG normal", "Aile öyküsü var", "Geçirmemiş", "Yok"],
+    "anamnez2_seker_hastaligi": ["DM yok", "Şeker hastalığı yok", "Ailede var", "Açlık şekeri normal", "Yok"],
+    "anamnez2_sarilik": ["Geçirmemiş", "Sarılık yok", "Çocuklukta geçirmiş", "Hepatit B aşılı", "Yok"],
+    "anamnez2_bobrek_hastaligi": ["Böbrek hastalığı yok", "Taş öyküsü yok", "Geçirmemiş", "İdrar tahlili normal", "Yok"],
+    "anamnez2_mide_ulser": ["Ülser yok", "Reflü şikayeti", "Gastrit öyküsü", "Geçirmemiş", "Yok"],
+    "anamnez2_isitme_kaybi": ["İşitme kaybı yok", "Odyometri normal", "Gürültüde zorlanıyor", "Geçirmemiş", "Yok"],
+    "anamnez2_gorme_bozuklugu": ["Gözlük kullanıyor", "Miyopi", "Görme bozukluğu yok", "Astigmat", "Yok"],
+    "anamnez2_sinir_sistemi": ["Sinir sistemi hastalığı yok", "Migren", "Epilepsi yok", "Geçirmemiş", "Yok"],
+    "anamnez2_deri_hastaligi": ["Deri hastalığı yok", "Egzama öyküsü", "Alerjik cilt", "Geçirmemiş", "Yok"],
+    "anamnez2_besin_zehirlenmesi": ["Geçirmemiş", "Besin zehirlenmesi yok", "Yaz aylarında bir kez", "Yok", "Hayır"],
+    "anamnez2_diger": ["Başka hastalık yok", "Yok", "Hipotiroidi", "Geçirmemiş", "Kronik hastalığı yok"],
+}
+
 ALLERGIES = ["Yok", "Polen", "Ev tozu", "Penisilin", "Lateks", "Mevsimsel", "Polen alerjisi", "Toz akarı", "Aspirin", "Kedi tüyü"]
 FAMILY = {
     "anne": ["Sağlıklı", "Sağlıklı", "HT", "DM", "Hipertansiyon", "Diyabet", "Vefat", "Tiroid", "Astım", "Kalp"],
@@ -386,6 +410,12 @@ def synthetic_tc(index: int) -> str:
 
 # fill_rate=100 → "tam dolu": gerçekçi boş bırakma yok, her kutuya bir değer yazılır (generate_form ayarlar).
 _TAM_DOLU = False
+TAM_DOLU_MIN = 0.65  # tam dolu modda bir formda dolu kutu oranının alt sınırı
+# Kimlik, ölçüm ve sonuç alanları rastgele boşaltılmaz (kimlik/ölçüm olmadan form anlamsız olur).
+DOLDURMA_KORUMALI = {
+    "calisan_adi_soyadi", "calisan_tc_no", "calisan_dogumyeri_ve_tarihi", "calisan_cinsiyet", "calisan_cep_tel", "kan_grubu",
+    "ta", "ta_diastolik", "nb", "boy", "kilo", "onay_tarihi", "kanaat_sonuc", "hekim_adi_soyadi",
+}
 
 
 def maybe(value: Any, probability: float) -> Any:
@@ -490,6 +520,15 @@ def anamnez_cell(field: str, identity: dict[str, Any], profile: str, exam_date: 
     if field in EXTRA_ANAMNEZ and random.random() < 0.04:
         name, icd = EXTRA_ANAMNEZ[field]
         return f"{name} ({icd})"
+    if _TAM_DOLU:  # NFM yerine alana özgü kısa cevap; NFM/N/✓ azınlıkta kalır
+        roll = random.random()
+        if roll < 0.15:
+            return "NFM"
+        if roll < 0.22:
+            return "N"
+        if roll < 0.29:
+            return "✓"
+        return random.choice(ANAMNEZ_ZENGIN.get(field, _ANA_GENEL) + _ANA_GENEL[:2])
     roll = random.random()
     if roll < NFM_RATE[profile]:
         # NFM yazılacak hücrelerin bir kısmına hekimler tik ya da N koyar
@@ -616,8 +655,8 @@ def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, pro
         "soygecmisi_baba": identity["family"]["baba"],
         "soygecmisi_kardes": identity["family"]["kardes"],
         "soygecmisi_cocuk": "" if bekar else (identity["family"]["cocuk"] if age > 22 else ("Yok" if _TAM_DOLU else "")),
-        "ta": f"{systolic}/{diastolic}",
-        "ta_diastolik": "",
+        "ta": f"{systolic}",            # matbu formda "TA: [sistolik] / [diastolik] mmHg": diastolik mmHg kutusuna yazılır
+        "ta_diastolik": f"{diastolic}",
         "nb": random.randint(88, 110) if any(c["icd"] == "R00.0" for c in identity["conditions"]) else random.randint(58, 96),
         "boy": identity["height"],
         "kilo": weight,
@@ -649,9 +688,19 @@ def generate_form(identity: dict[str, Any], exam_type: str, exam_date: date, pro
 
     if _TAM_DOLU:  # kalan boşlar (ör. hastalığı olmayanın alerjisi, tedavisi) "Yok" yazılır; Hayır daireleri ve TA kutusu hariç
         for key in values:
-            if (values[key] in (None, "") and not key.endswith("_hayir") and key not in ("ta_diastolik", "soygecmisi_cocuk")
+            if (values[key] in (None, "") and not key.endswith("_hayir") and key != "soygecmisi_cocuk"
                     and values.get(f"{key}_hayir") != "Hayır"):
                 values[key] = "Yok"
+
+    if _TAM_DOLU:  # her formun doluluğu %65-100 arasında rastgele: hekimler her zaman her kutuyu doldurmaz
+        hedef = round(random.uniform(TAM_DOLU_MIN, 1.0) * len(FORM_SCHEMA))
+        dolu = [k for k, *_ in FORM_SCHEMA if values.get(k) not in (None, "")]
+        aday = [k for k in dolu if k not in DOLDURMA_KORUMALI]
+        random.shuffle(aday)
+        while len(dolu) > hedef and aday:
+            k = aday.pop()
+            values[k] = ""
+            dolu.remove(k)
 
     record: dict[str, Any] = {label: "" for label in META_LABELS}
     record.update({
