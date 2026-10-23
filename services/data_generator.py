@@ -441,10 +441,10 @@ def generate_identity(index: int, optional_rate: float, first_exam: date) -> dic
         "allergy": maybe(random.choice(ALLERGIES), optional_rate - 0.25),
         "conditions": conditions,
         "family": {k: maybe(random.choice(v), optional_rate if k in ("anne", "baba") else optional_rate - 0.2) for k, v in FAMILY.items()},
-        "smoker": random.choices(["hayir", "evet", "birakmis"], weights=[55, 33, 12])[0],
+        "smoker": random.choices(["hayir", "evet", "birakmis"], weights=[25, 45, 30] if _TAM_DOLU else [55, 33, 12])[0],
         "smoke_qty": random.choice([1, 5, 10, 10, 15, 20, 20, 30]),
         "smoke_since": random.randint(birth.year + 15, first_exam.year - 1),
-        "alcohol": random.choices(["hayir", "evet", "sosyal"], weights=[70, 15, 15])[0],
+        "alcohol": random.choices(["hayir", "evet", "sosyal"], weights=[35, 30, 35] if _TAM_DOLU else [70, 15, 15])[0],
         "previous": previous_jobs(birth.year, first_exam.year, optional_rate),
     }
 
@@ -511,6 +511,19 @@ def history_answers(identity: dict[str, Any], exam_date: date, fill: float) -> d
     rates = {"hastanede_yattiniz_mi": 0.15, "ameliyat_oldunuz_mu": 0.18, "is_kazasi_gecirdiniz_mi": 0.07,
              "meslek_hastaligi_suphesi": 0.03, "maluliyet_aldiniz_mi": 0.02}
     treat = [c["treat"] for c in identity["conditions"] if c["treat"]]
+    if _TAM_DOLU:  # tam dolu kartlarda öykü bölümü "Hayır"dan zengin: çoğu kutuda kısa açıklama yazılır
+        for k, ek in {
+            "hastanede_yattiniz_mi": ["Gastroenterit 2019", "Kırık tedavisi", "Renal kolik", "Gözlem 1 gün", "Tonsillit", "Migren atağı"],
+            "ameliyat_oldunuz_mu": ["Burun ameliyatı", "Safra kesesi 2020", "Dış çekimi", "Katarakt", "Tırnak ameliyatı", "Kist eksizyonu"],
+            "is_kazasi_gecirdiniz_mi": ["Gözüne kıymık", "Elini kesti 2022", "Merdivenden düştü", "Yanık", "Bel burkulması"],
+            "meslek_hastaligi_suphesi": ["Solunum tetkiki yapıldı", "Odyometri normal", "Cilt tetkiki", "Yok, takipte"],
+            "maluliyet_aldiniz_mi": ["Yok, başvurmadı", "%10 oran", "Rapor aldı"],
+        }.items():
+            texts[k] = texts[k] + ek
+        rates = {"hastanede_yattiniz_mi": 0.50, "ameliyat_oldunuz_mu": 0.55, "is_kazasi_gecirdiniz_mi": 0.35,
+                 "meslek_hastaligi_suphesi": 0.22, "maluliyet_aldiniz_mi": 0.15}
+        if not treat and random.random() < 0.45:
+            treat = [random.choice(["Vitamin D", "İnhaler", "Antihistaminik", "Ağrı kesici kullanıyor", "Demir tedavisi", "Fizik tedavi", "Reflü ilacı"])]
     result: dict[str, tuple[str, str]] = {}
     for key, options in texts.items():
         if key == "su_anda_tedavi_goruyor_mu":
@@ -540,7 +553,8 @@ def history_answers(identity: dict[str, Any], exam_date: date, fill: float) -> d
     if identity["alcohol"] == "evet":
         result["alkol_aliyor_musunuz"] = (random.choice(["1/5", "2/10", "1/20", "3/8", "1/1 2015"]), "")
     elif identity["alcohol"] == "sosyal":
-        result["alkol_aliyor_musunuz"] = (random.choice(["Sosyal", "Nadiren", "Ayda bir"]), "")
+        sosyal = ["Sosyal", "Nadiren", "Ayda bir"] + (["Haftada 1", "Hafta sonu", "Bayramlarda", "Ara sıra bira", "Özel günlerde", "Yemekte 1 kadeh"] if _TAM_DOLU else [])
+        result["alkol_aliyor_musunuz"] = (random.choice(sosyal), "")
     else:
         result["alkol_aliyor_musunuz"] = ("", "Hayır" if random.random() < fill else "")
     return result
@@ -656,6 +670,8 @@ def generate_records(count: int, fill_rate: int = 85, doctor_profile: str = "ran
                      start_index: int = 1, repeat_rate: int = 10) -> list[dict[str, Any]]:
     """`count` form üretir; ~`repeat_rate`% form daha önceki bir kişinin sonraki muayenesidir
     (aynı kimlik, daha geç onay tarihi, periyodik / iş değişikliği / işe dönüş)."""
+    global _TAM_DOLU
+    _TAM_DOLU = fill_rate >= 100  # kimlik üretimi de tam dolu modda zenginleşir (sigara/alkol dağılımı)
     if count < 1:
         raise ValueError("Kayıt sayısı en az 1 olmalıdır.")
     if count > 50_000:
