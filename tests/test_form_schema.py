@@ -115,3 +115,10 @@ def test_anamnezde_nfm_yerine_tik_ve_n_da_var():
     random.seed(22)
     ham = [k[e] for k in generate_records(200, fill_rate=85) for a, e, *_ in FORM_SCHEMA if a.startswith("anamnez")]
     assert ham.count("NFM") / len(ham) > 0.3  # %85 modunda NFM baskın kalır
+
+
+def test_ocr_ground_truth_tik_nfm_olur():
+    kayit = generate_records(1, fill_rate=100)[0]
+    etiket = next(e for a, e, *_ in FORM_SCHEMA if a == "anamnez1_carpinti")
+    kayit[etiket] = "✓"
+    assert ocr_ground_truth(kayit)["anamnez1_carpinti"] == "NFM"
