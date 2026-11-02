@@ -17,7 +17,7 @@ from services.batch_storage import (
 from services.data_generator import FORM_SCHEMA, assign_test_split, generate_records, ocr_ground_truth
 from services.excel_exporter import create_excel
 from services.form_renderer import RenderError, load_coordinates, render_page, save_coordinates
-from services.sequence_manager import reserve_sequence
+from services.sequence_manager import peek_sequence, reserve_sequence
 
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "outputs"
@@ -75,10 +75,16 @@ def write_ocr_ground_truth(batch_path: Path, records: list[dict]) -> None:
             json.dumps(ocr_ground_truth(record), ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def index_context(error=None, form=None):
+    """Başlangıç ekranının bağlamı: hata sonrası girilen değerler (form) korunur; sıradaki numara onay mesajı içindir."""
+    return {"error": error, "form": form or {}, "next_form_number": peek_sequence(SEQUENCE_PATH),
+            "batches": list_batches(BATCH_DIR)[:10]}
+
+
 @app.get("/")
 def index():
     ensure_dirs()
-    return render_template("index.html", batches=list_batches(BATCH_DIR)[:10])
+    return render_template("index.html", **index_context())
 
 
 @app.post("/batch/create")
@@ -130,10 +136,10 @@ def create_batch():
             simplified_fields=simplified_fields,
         )
     except ValueError as exc:
-        return render_template("index.html", error=str(exc), batches=list_batches(BATCH_DIR)[:10]), 400
+        return render_template("index.html", **index_context(error=str(exc), form=request.form.to_dict())), 400
     except Exception as exc:
         app.logger.exception("Toplu veri üretme hatası")
-        return render_template("index.html", error=f"Beklenmeyen hata: {exc}", batches=list_batches(BATCH_DIR)[:10]), 500
+        return render_template("index.html", **index_context(error=f"Beklenmeyen hata: {exc}", form=request.form.to_dict())), 500
 
 
 @app.get("/batch/<batch_id>")
