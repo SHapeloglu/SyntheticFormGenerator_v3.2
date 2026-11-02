@@ -32,7 +32,7 @@
 <body>
     <header class="topbar">
         <strong>Form Koordinat Editörü</strong>
-        <a href="/">← Ana sayfa</a>
+        <a href="{{ request.script_root }}/">← Ana sayfa</a>
     </header>
 
     <main class="layout">
@@ -119,7 +119,7 @@
             formFile.value = '';
 
             if (page.image) {
-                formImage.src = `/static/forms/${page.image}?t=${Date.now()}`;
+                formImage.src = `{{ request.script_root }}/static/forms/${page.image}?t=${Date.now()}`;
                 statusBox.textContent = `${pageLabel} görseli yüklendi.`;
                 uploadedFileInfo.textContent = `Yüklü dosya: ${page.image}`;
             } else {
@@ -198,7 +198,7 @@
             const body = new FormData();
             body.append('form_image', file);
             body.append('page_key', pageKey.value);
-            const response = await fetch('/coordinates/upload', {method: 'POST', body});
+            const response = await fetch('{{ request.script_root }}/coordinates/upload', {method: 'POST', body});
             const result = await response.json();
             if (!result.ok) {
                 statusBox.textContent = result.error;
@@ -229,7 +229,7 @@
                 font_size: Number(fontSize.value),
                 ...currentRect
             };
-            const response = await fetch('/coordinates/save', {
+            const response = await fetch('{{ request.script_root }}/coordinates/save', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
@@ -249,7 +249,7 @@
 
         document.getElementById('deleteButton').onclick = async () => {
             const payload = {page_key: pageKey.value, field_name: fieldName.value};
-            const response = await fetch('/coordinates/delete', {
+            const response = await fetch('{{ request.script_root }}/coordinates/delete', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
