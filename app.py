@@ -7,6 +7,7 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, send_file, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
 from services.batch_storage import (
@@ -29,6 +30,9 @@ SEQUENCE_PATH = BASE_DIR / "config" / "sequence.json"
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 app = Flask(__name__)
+# Nginx arkasında alt yolda (ör. /sentetik) çalışırken X-Forwarded-Prefix başlığı SCRIPT_NAME olur: url_for, redirect ve
+# request.script_root önekli üretilir. Başlık yoksa davranış değişmez (yerel kullanım). Yalnız 127.0.0.1'e bağlanır.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
 # Yerel araç için sabit yedek; ağa açılırsa SFG_SECRET_KEY ortam değişkeniyle verilmeli.
 app.secret_key = os.environ.get("SFG_SECRET_KEY", "synthetic-form-generator-local-secret")
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
@@ -281,7 +285,7 @@ def upload_form_page():
     page["image"] = filename
     page.setdefault("fields", {})
     save_coordinates(COORDINATES_PATH, coordinates)
-    return jsonify({"ok": True, "filename": filename, "image_url": f"/static/forms/{filename}", "page_key": page_key})
+    return jsonify({"ok": True, "filename": filename, "image_url": url_for("static", filename=f"forms/{filename}"), "page_key": page_key})
 
 
 @app.post("/coordinates/save")
