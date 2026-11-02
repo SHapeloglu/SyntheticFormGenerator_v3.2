@@ -35,3 +35,11 @@ def reserve_sequence(path: Path, count: int) -> int:
         )
         os.replace(temporary, path)
         return next_number
+
+
+def peek_sequence(path: Path) -> int:
+    """Sıradaki Form numarasını YAZMADAN okur (dosya yok / bozuksa 1). Ekranda onay mesajı için."""
+    try:
+        return max(1, int(json.loads(path.read_text(encoding="utf-8")).get("next_form_number", 1)))
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return 1
