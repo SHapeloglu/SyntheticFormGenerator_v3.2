@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import json
 import os
 from datetime import datetime
@@ -48,13 +49,22 @@ def ensure_dirs() -> None:
 PRINT_SWAP = [("Önceki İşkolu", "Önceki Yaptığı İş")]
 
 
+_GORUNTU_ONEK = re.compile(r"^(Soygeçmiş - |Şikâyet: |Hastalık: |Tetkik: )")
+
+
+def goruntu_etiketi(label: str) -> str:
+    """Kartta gösterilen etiket: 'Soygeçmiş - Anne' -> 'Anne', 'Şikâyet: Göğüs ağrısı' -> 'Göğüs ağrısı', 'Hastalık: X' -> 'X', 'Tetkik: Kan' -> 'Kan'.
+    Kayıt anahtarı (şemadaki etiket) değişmez; yalnız görünen metin sadeleşir."""
+    return _GORUNTU_ONEK.sub("", label)
+
+
 def card_groups(record: dict) -> list[tuple[str, list[tuple[str, object]]]]:
     """Kart bölümleri form şemasından gelir (matbu formdaki sırayla); boş alanlar kartta görünmez."""
     sections: dict[str, list[tuple[str, object]]] = {}
     for _key, label, page, section in FORM_SCHEMA:
         value = record.get(label, "")
         if value not in (None, ""):
-            sections.setdefault(f"Sayfa {page} · {section}", []).append((label, value))
+            sections.setdefault(f"Sayfa {page} · {section}", []).append((goruntu_etiketi(label), value))
     # Yazdırmada yer değiştirilen alan çiftleri (yalnız görünüm; kayıt ve dışa aktarım sırası değişmez)
     for title, items in sections.items():
         labels = [label for label, _ in items]
