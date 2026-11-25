@@ -49,11 +49,11 @@ def ensure_dirs() -> None:
 PRINT_SWAP = [("Önceki İşkolu", "Önceki Yaptığı İş")]
 
 
-_GORUNTU_ONEK = re.compile(r"^(Soygeçmiş - |Şikâyet: )")
+_GORUNTU_ONEK = re.compile(r"^(Soygeçmiş - |Şikâyet: |Hastalık: |Tetkik: )")
 
 
 def goruntu_etiketi(label: str) -> str:
-    """Kartta gösterilen etiket: 'Soygeçmiş - Anne' -> 'Anne', 'Şikâyet: Göğüs ağrısı' -> 'Göğüs ağrısı'.
+    """Kartta gösterilen etiket: 'Soygeçmiş - Anne' -> 'Anne', 'Şikâyet: Göğüs ağrısı' -> 'Göğüs ağrısı', 'Hastalık: X' -> 'X', 'Tetkik: Kan' -> 'Kan'.
     Kayıt anahtarı (şemadaki etiket) değişmez; yalnız görünen metin sadeleşir."""
     return _GORUNTU_ONEK.sub("", label)
 
