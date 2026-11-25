@@ -45,6 +45,9 @@ def ensure_dirs() -> None:
     FORM_DIR.mkdir(parents=True, exist_ok=True)
 
 
+PRINT_SWAP = [("Önceki İşkolu", "Önceki Yaptığı İş")]
+
+
 def card_groups(record: dict) -> list[tuple[str, list[tuple[str, object]]]]:
     """Kart bölümleri form şemasından gelir (matbu formdaki sırayla); boş alanlar kartta görünmez."""
     sections: dict[str, list[tuple[str, object]]] = {}
@@ -52,6 +55,13 @@ def card_groups(record: dict) -> list[tuple[str, list[tuple[str, object]]]]:
         value = record.get(label, "")
         if value not in (None, ""):
             sections.setdefault(f"Sayfa {page} · {section}", []).append((label, value))
+    # Yazdırmada yer değiştirilen alan çiftleri (yalnız görünüm; kayıt ve dışa aktarım sırası değişmez)
+    for title, items in sections.items():
+        labels = [label for label, _ in items]
+        for a, b in PRINT_SWAP:
+            if a in labels and b in labels:
+                ia, ib = labels.index(a), labels.index(b)
+                items[ia], items[ib] = items[ib], items[ia]
     return list(sections.items())
 
 
